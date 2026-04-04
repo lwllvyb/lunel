@@ -322,11 +322,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
               )}
             </TouchableOpacity>
             <TouchableOpacity onPress={() => { setShowSpawnForm(v => !v); if (!showSpawnForm) { setShowSearch(false); } setSpawnCommand(''); setSpawnArgs(''); setSpawnPath(''); }} style={{ padding: 8 }}>
-              {showSpawnForm ? (
-                <X size={20} color={colors.fg.muted} />
-              ) : (
-                <Plus size={22} color={colors.fg.muted} />
-              )}
+              <Plus size={22} color={colors.fg.muted} />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => { setLoading(true); loadProcesses(); }} style={{ padding: 8 }}>
               <RefreshCw size={20} color={colors.fg.muted} />
@@ -389,13 +385,20 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
             alignItems: 'center',
             backgroundColor: colors.bg.raised,
             borderRadius: radius.md,
+            minHeight: 40,
             paddingHorizontal: spacing[3],
             gap: spacing[2],
             marginBottom: spacing[2],
           }}>
             <Terminal size={14} color={colors.fg.muted} strokeWidth={2} />
             <TextInput
-              style={{ flex: 1, fontSize: 14, fontFamily: fonts.sans.regular, color: colors.fg.default } as any}
+              style={{
+                flex: 1,
+                fontSize: 14,
+                fontFamily: fonts.sans.regular,
+                color: colors.fg.default,
+                paddingVertical: Platform.OS === 'android' ? 8 : 0,
+              } as any}
               value={spawnCommand}
               onChangeText={setSpawnCommand}
               placeholder="command... (e.g. node, npm, python)"
@@ -409,11 +412,18 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
             alignItems: 'center',
             backgroundColor: colors.bg.raised,
             borderRadius: radius.md,
+            minHeight: 40,
             paddingHorizontal: spacing[3],
             marginBottom: spacing[2],
           }}>
             <TextInput
-              style={{ flex: 1, fontSize: 14, fontFamily: fonts.sans.regular, color: colors.fg.default } as any}
+              style={{
+                flex: 1,
+                fontSize: 14,
+                fontFamily: fonts.sans.regular,
+                color: colors.fg.default,
+                paddingVertical: Platform.OS === 'android' ? 8 : 0,
+              } as any}
               value={spawnPath}
               onChangeText={setSpawnPath}
               placeholder="path... (optional absolute path, default current dir)"
@@ -428,11 +438,18 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
             alignItems: 'center',
             backgroundColor: colors.bg.raised,
             borderRadius: radius.md,
+            minHeight: 40,
             paddingHorizontal: spacing[3],
             marginBottom: spacing[2],
           }}>
             <TextInput
-              style={{ flex: 1, fontSize: 14, fontFamily: fonts.sans.regular, color: colors.fg.default } as any}
+              style={{
+                flex: 1,
+                fontSize: 14,
+                fontFamily: fonts.sans.regular,
+                color: colors.fg.default,
+                paddingVertical: Platform.OS === 'android' ? 8 : 0,
+              } as any}
               value={spawnArgs}
               onChangeText={setSpawnArgs}
               placeholder="arguments... (e.g. run dev --port 3000)"
