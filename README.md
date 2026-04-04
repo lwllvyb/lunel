@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://lunel.dev">
-    <img src="./logo-ornate.png" alt="Lunel" width="600" />
+    <img src="https://lunel.dev/img/github/github-main.png" alt="Lunel" width="600" />
   </a>
 </div><br />
 <p align="center">AI-powered mobile IDE and cloud development platform. Code on your phone, run on your machine or in secure cloud sandboxes.</p> <br />
