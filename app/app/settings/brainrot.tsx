@@ -1,6 +1,7 @@
 import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { Check, ChevronLeft } from "lucide-react-native";
+import PluginHeader, { usePluginHeaderHeight } from "@/components/PluginHeader";
+import { Check } from "lucide-react-native";
 import { Stack, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import React from "react";
@@ -26,19 +27,19 @@ function SourceOptionRow({
   selected,
   onPress,
 }: SourceOptionRowProps) {
-  const { colors, fonts, spacing, radius } = useTheme();
+  const { colors, fonts, spacing, radius, typography } = useTheme();
 
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
-      style={[styles.optionRow, { paddingVertical: spacing[3], paddingHorizontal: spacing[4] }]}
+      style={[styles.optionRow, { paddingVertical: spacing[2], paddingHorizontal: spacing[3] }]}
     >
       <View style={styles.optionText}>
-        <Text style={[styles.optionLabel, { color: colors.fg.default, fontFamily: fonts.sans.regular }]}>
+        <Text style={[styles.optionLabel, { color: colors.fg.default, fontFamily: fonts.sans.regular, fontSize: typography.body }]}>
           {label}
         </Text>
-        <Text style={[styles.optionDescription, { color: colors.fg.muted, fontFamily: fonts.sans.regular }]}>
+        <Text style={[styles.optionDescription, { color: colors.fg.muted, fontFamily: fonts.sans.regular, fontSize: typography.caption }]}>
           {description}
         </Text>
       </View>
@@ -71,15 +72,15 @@ function ToggleRow({
   value,
   onValueChange,
 }: ToggleRowProps) {
-  const { colors, fonts, spacing } = useTheme();
+  const { colors, fonts, spacing, typography } = useTheme();
 
   return (
-    <View style={[styles.optionRow, { paddingVertical: spacing[3], paddingHorizontal: spacing[4] }]}>
+    <View style={[styles.optionRow, { paddingVertical: spacing[2], paddingHorizontal: spacing[3] }]}>
       <View style={styles.optionText}>
-        <Text style={[styles.optionLabel, { color: colors.fg.default, fontFamily: fonts.sans.regular }]}>
+        <Text style={[styles.optionLabel, { color: colors.fg.default, fontFamily: fonts.sans.regular, fontSize: typography.body }]}>
           {label}
         </Text>
-        <Text style={[styles.optionDescription, { color: colors.fg.muted, fontFamily: fonts.sans.regular }]}>
+        <Text style={[styles.optionDescription, { color: colors.fg.muted, fontFamily: fonts.sans.regular, fontSize: typography.caption }]}>
           {description}
         </Text>
       </View>
@@ -95,60 +96,25 @@ function ToggleRow({
 }
 
 export default function BrainrotSettingsPage() {
-  const { colors, fonts, radius, spacing } = useTheme();
+  const { colors, fonts, spacing, typography } = useTheme();
   const { settings, updateSetting } = useAppSettings();
   const router = useRouter();
+  const headerHeight = usePluginHeaderHeight();
   const needsWebviewLoginNotice =
     settings.brainrotSource === "instagram"
     || settings.brainrotSource === "x"
     || settings.brainrotSource === "tiktok";
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg.base }]}>
+    <View style={[styles.container, { backgroundColor: colors.bg.base, paddingTop: headerHeight }]}>
       <Stack.Screen options={{ headerShown: false }} />
-
-      <View style={[styles.header, { backgroundColor: colors.bg.base }]}>
-        <TouchableOpacity
-          onPress={() => {
-            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.back();
-          }}
-          style={[
-            styles.backButton,
-            {
-              borderRadius: radius.full,
-              backgroundColor: colors.bg.raised,
-              borderColor: colors.border.secondary,
-              borderWidth: 0.5,
-            },
-          ]}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <ChevronLeft size={24} color={colors.fg.default} strokeWidth={2} />
-        </TouchableOpacity>
-        <View
-          style={[
-            styles.titlePill,
-            {
-              borderRadius: radius.full,
-              backgroundColor: colors.bg.raised,
-              borderColor: colors.border.secondary,
-              borderWidth: 0.5,
-            },
-          ]}
-        >
-          <Text style={[styles.headerTitle, { color: colors.fg.default, fontFamily: fonts.sans.semibold }]}>
-            Brainrot
-          </Text>
-        </View>
-        <View style={styles.rightPlaceholder} />
-      </View>
+      <PluginHeader title="Brainrot" colors={colors} onBack={() => router.back()} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
-        <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium }]}>
+        <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: typography.caption }]}>
           SOURCE
         </Text>
-        <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 18 }]}>
+        <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 10 }]}>
           <SourceOptionRow
             label="YouTube"
             description="Open YouTube Shorts by default"
@@ -193,17 +159,17 @@ export default function BrainrotSettingsPage() {
                 },
               ]}
             >
-              <Text style={[styles.noteText, { color: colors.fg.muted, fontFamily: fonts.sans.regular }]}>
+              <Text style={[styles.noteText, { color: colors.fg.muted, fontFamily: fonts.sans.regular, fontSize: typography.caption }]}>
                 You may have to log in once in the plugin for this source.
               </Text>
             </View>
           ) : null}
         </View>
 
-        <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium }]}>
+        <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: typography.caption }]}>
           INTEGRATION
         </Text>
-        <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 18 }]}>
+        <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 10 }]}>
           <ToggleRow
             label="AI Chat Integration"
             description="Show Brainrot while AI is processing, then return to AI chat"
@@ -224,64 +190,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-    height: 64,
-    paddingBottom: 10,
-  },
-  backButton: {
-    width: 45,
-    height: 45,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  titlePill: {
-    minHeight: 45,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  headerTitle: {
-    fontSize: 16,
-  },
-  rightPlaceholder: {
-    width: 45,
-    height: 45,
-    opacity: 0,
-  },
   content: {
     flex: 1,
   },
   sectionHeader: {
-    fontSize: 12,
     letterSpacing: 0.5,
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 8,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 6,
   },
   section: {
-    marginHorizontal: 16,
+    marginHorizontal: 12,
     overflow: "hidden",
   },
   optionRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
+    gap: 8,
   },
   optionText: {
     flex: 1,
   },
-  optionLabel: {
-    fontSize: 16,
-  },
-  optionDescription: {
-    fontSize: 13,
-    marginTop: 2,
-  },
+  optionLabel: {},
+  optionDescription: { marginTop: 2 },
   optionIndicator: {
     width: 24,
     height: 24,
@@ -291,15 +223,12 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    marginHorizontal: 16,
+    marginHorizontal: 12,
   },
   inlineNote: {
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderTopWidth: 1,
   },
-  noteText: {
-    fontSize: 13,
-    lineHeight: 19,
-  },
+  noteText: { lineHeight: 19 },
 });

@@ -1,8 +1,7 @@
 import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { ChevronLeft } from "lucide-react-native";
+import PluginHeader, { usePluginHeaderHeight } from "@/components/PluginHeader";
 import { Stack, useRouter } from "expo-router";
-import * as Haptics from "expo-haptics";
 
 import React from "react";
 import {
@@ -22,16 +21,16 @@ interface ToggleRowProps {
 }
 
 function ToggleRow({ label, description, value, onValueChange }: ToggleRowProps) {
-  const { colors, fonts, spacing } = useTheme();
+  const { colors, fonts, spacing, typography } = useTheme();
 
   return (
-    <View style={[styles.row, { paddingVertical: spacing[3], paddingHorizontal: spacing[4] }]}>
+    <View style={[styles.row, { paddingVertical: spacing[2], paddingHorizontal: spacing[3] }]}>
       <View style={styles.rowText}>
-        <Text style={[styles.rowLabel, { color: colors.fg.default, fontFamily: fonts.sans.regular }]}>
+        <Text style={[styles.rowLabel, { color: colors.fg.default, fontFamily: fonts.sans.regular, fontSize: typography.body }]}>
           {label}
         </Text>
         {description ? (
-          <Text style={[styles.rowDescription, { color: colors.fg.muted, fontFamily: fonts.sans.regular }]}>
+          <Text style={[styles.rowDescription, { color: colors.fg.muted, fontFamily: fonts.sans.regular, fontSize: typography.caption }]}>
             {description}
           </Text>
         ) : null}
@@ -48,56 +47,21 @@ function ToggleRow({ label, description, value, onValueChange }: ToggleRowProps)
 }
 
 export default function AppSettingsPage() {
-  const { colors, fonts, radius, spacing } = useTheme();
+  const { colors, fonts, spacing, typography } = useTheme();
   const { settings, updateSetting } = useAppSettings();
   const router = useRouter();
+  const headerHeight = usePluginHeaderHeight();
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg.base }]}>
+    <View style={[styles.container, { backgroundColor: colors.bg.base, paddingTop: headerHeight }]}>
       <Stack.Screen options={{ headerShown: false }} />
-
-      <View style={[styles.header, { backgroundColor: colors.bg.base }]}>
-        <TouchableOpacity
-          onPress={() => {
-            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.back();
-          }}
-          style={[
-            styles.backButton,
-            {
-              borderRadius: radius.full,
-              backgroundColor: colors.bg.raised,
-              borderColor: colors.border.secondary,
-              borderWidth: 0.5,
-            },
-          ]}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <ChevronLeft size={24} color={colors.fg.default} strokeWidth={2} />
-        </TouchableOpacity>
-        <View
-          style={[
-            styles.titlePill,
-            {
-              borderRadius: radius.full,
-              backgroundColor: colors.bg.raised,
-              borderColor: colors.border.secondary,
-              borderWidth: 0.5,
-            },
-          ]}
-        >
-          <Text style={[styles.headerTitle, { color: colors.fg.default, fontFamily: fonts.sans.semibold }]}>
-            App
-          </Text>
-        </View>
-        <View style={[styles.rightPlaceholder, { opacity: 0 }]} />
-      </View>
+      <PluginHeader title="App" colors={colors} onBack={() => router.back()} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
-        <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium }]}>
+        <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: typography.caption }]}>
           DISPLAY
         </Text>
-        <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 18 }]}>
+        <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 10 }]}>
           <ToggleRow
             label="Keep App Awake"
             description="Prevent auto-lock while Lunel is open"
@@ -118,45 +82,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-    height: 64,
-    paddingBottom: 10,
-  },
-  backButton: {
-    width: 45,
-    height: 45,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  titlePill: {
-    minHeight: 45,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  headerTitle: {
-    fontSize: 16,
-  },
-  rightPlaceholder: {
-    width: 45,
-    height: 45,
-  },
   content: {
     flex: 1,
   },
   sectionHeader: {
-    fontSize: 12,
     letterSpacing: 0.5,
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 8,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 6,
   },
   section: {
-    marginHorizontal: 16,
+    marginHorizontal: 12,
     overflow: "hidden",
   },
   row: {
@@ -168,11 +104,8 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 12,
   },
-  rowLabel: {
-    fontSize: 16,
-  },
+  rowLabel: {},
   rowDescription: {
-    fontSize: 13,
     marginTop: 2,
   },
 });

@@ -1,12 +1,12 @@
 import { useTheme } from "@/contexts/ThemeContext";
+import PluginHeader, { usePluginHeaderHeight } from "@/components/PluginHeader";
 import {
   displayFamilies,
   monoFamilies,
   normalFamilies,
 } from "@/constants/themes";
-import { ChevronLeft, ChevronRight } from "lucide-react-native";
+import { ChevronRight } from "lucide-react-native";
 import { Stack, useRouter } from "expo-router";
-import * as Haptics from "expo-haptics";
 
 import React from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -18,19 +18,19 @@ interface FontRowProps {
 }
 
 function FontRow({ label, currentFont, onPress }: FontRowProps) {
-  const { colors, fonts, spacing } = useTheme();
+  const { colors, fonts, spacing, typography } = useTheme();
 
   return (
     <TouchableOpacity
-      style={[styles.fontRow, { paddingVertical: spacing[3], paddingHorizontal: spacing[4] }]}
+      style={[styles.fontRow, { paddingVertical: spacing[2], paddingHorizontal: spacing[3] }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
       <View style={styles.rowLeft}>
-        <Text style={[styles.rowLabel, { color: colors.fg.default, fontFamily: fonts.sans.regular }]}>
+        <Text style={[styles.rowLabel, { color: colors.fg.default, fontFamily: fonts.sans.regular, fontSize: typography.body }]}>
           {label}
         </Text>
-        <Text style={[styles.currentFont, { color: colors.fg.muted, fontFamily: fonts.sans.regular }]}>
+        <Text style={[styles.currentFont, { color: colors.fg.muted, fontFamily: fonts.sans.regular, fontSize: typography.caption }]}>
           {currentFont}
         </Text>
       </View>
@@ -44,72 +44,26 @@ export default function FontsPage() {
     colors,
     fonts,
     spacing,
-    radius,
     fontSelection,
   } = useTheme();
   const router = useRouter();
+  const headerHeight = usePluginHeaderHeight();
 
   const currentNormalName = normalFamilies[fontSelection.normal]?.name ?? "Default";
   const currentMonoName = monoFamilies[fontSelection.mono]?.name ?? "Default";
   const currentDisplayName = displayFamilies[fontSelection.display]?.name ?? "Default";
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg.base }]}>
+    <View style={[styles.container, { backgroundColor: colors.bg.base, paddingTop: headerHeight }]}>
       <Stack.Screen options={{ headerShown: false }} />
+      <PluginHeader title="Fonts" colors={colors} onBack={() => router.back()} />
 
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.bg.base,
-            marginBottom: spacing[2],
-          },
-        ]}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingTop: spacing[3] }}
+        showsVerticalScrollIndicator={false}
       >
-        <TouchableOpacity
-          onPress={() => {
-            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.back();
-          }}
-          style={[
-            styles.backButton,
-            {
-              borderRadius: radius.full,
-              backgroundColor: colors.bg.raised,
-              borderColor: colors.border.secondary,
-              borderWidth: 0.5,
-            },
-          ]}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <ChevronLeft size={24} color={colors.fg.default} strokeWidth={2} />
-        </TouchableOpacity>
-        <View
-          style={[
-            styles.titlePill,
-            {
-              borderRadius: radius.full,
-              backgroundColor: colors.bg.raised,
-              borderColor: colors.border.secondary,
-              borderWidth: 0.5,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.headerTitle,
-              { color: colors.fg.default, fontFamily: fonts.sans.semibold },
-            ]}
-          >
-            Fonts
-          </Text>
-        </View>
-        <View style={[styles.rightPlaceholder, { opacity: 0 }]} />
-      </View>
-
-      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-        <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 18, marginHorizontal: spacing[4] }]}>
+        <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 10, marginHorizontal: spacing[3] }]}>
           <FontRow
             label="Normal Font"
             currentFont={currentNormalName}
@@ -140,33 +94,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-    height: 64,
-    paddingBottom: 10,
-  },
-  backButton: {
-    width: 45,
-    height: 45,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  titlePill: {
-    minHeight: 45,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  headerTitle: {
-    fontSize: 16,
-  },
-  rightPlaceholder: {
-    width: 45,
-    height: 45,
-  },
   section: {
     overflow: "hidden",
   },
@@ -179,14 +106,10 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     gap: 2,
   },
-  rowLabel: {
-    fontSize: 16,
-  },
-  currentFont: {
-    fontSize: 13,
-  },
+  rowLabel: {},
+  currentFont: {},
   divider: {
     height: 1,
-    marginHorizontal: 16,
+    marginHorizontal: 12,
   },
 });

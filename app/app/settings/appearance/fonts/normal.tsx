@@ -1,10 +1,11 @@
 import { useTheme } from "@/contexts/ThemeContext";
+import PluginHeader, { usePluginHeaderHeight } from "@/components/PluginHeader";
 import {
   NormalFamilyId,
   normalFamilies,
   DEFAULT_FONT_SELECTION,
 } from "@/constants/themes";
-import { ChevronLeft, Check, Info } from "lucide-react-native";
+import { Check, Info } from "lucide-react-native";
 import { Stack, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 
@@ -21,7 +22,7 @@ interface FontOptionProps {
 }
 
 function FontOption({ name, sampleText, fontFamily, isSelected, isDefault, onSelect }: FontOptionProps) {
-  const { colors, fonts, spacing, radius } = useTheme();
+  const { colors, fonts, spacing, radius, typography } = useTheme();
 
   return (
     <TouchableOpacity
@@ -30,9 +31,9 @@ function FontOption({ name, sampleText, fontFamily, isSelected, isDefault, onSel
         styles.fontOption,
         {
           backgroundColor: isSelected ? colors.accent.default + '20' : colors.bg.raised,
-          borderRadius: 18,
-          padding: spacing[4],
-          marginBottom: spacing[3],
+          borderRadius: 10,
+          padding: spacing[3],
+          marginBottom: spacing[2],
         },
       ]}
     >
@@ -40,8 +41,8 @@ function FontOption({ name, sampleText, fontFamily, isSelected, isDefault, onSel
         <View style={{ flexDirection: "row", alignItems: "center", gap: spacing[2] }}>
           <Text
             style={{
-              fontSize: 16,
-              fontFamily: fonts.sans.semibold,
+              fontSize: typography.body,
+              fontFamily: fonts.sans.medium,
               color: isSelected ? colors.accent.default : colors.fg.default,
             }}
           >
@@ -49,7 +50,7 @@ function FontOption({ name, sampleText, fontFamily, isSelected, isDefault, onSel
           </Text>
           {isDefault && (
             <View style={{ backgroundColor: colors.accent.default + '30', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-              <Text style={{ fontSize: 11, fontFamily: fonts.sans.medium, color: colors.accent.default }}>
+              <Text style={{ fontSize: typography.caption, fontFamily: fonts.sans.medium, color: colors.accent.default }}>
                 Default
               </Text>
             </View>
@@ -72,7 +73,7 @@ function FontOption({ name, sampleText, fontFamily, isSelected, isDefault, onSel
       </View>
       <Text
         style={{
-          fontSize: 18,
+          fontSize: typography.caption,
           fontFamily: fontFamily,
           color: colors.fg.muted,
           marginTop: spacing[2],
@@ -94,88 +95,40 @@ export default function NormalFontPage() {
     setNormalFont,
   } = useTheme();
   const router = useRouter();
+  const headerHeight = usePluginHeaderHeight();
 
   const normalFontIds = Object.keys(normalFamilies) as NormalFamilyId[];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg.base }]}>
+    <View style={[styles.container, { backgroundColor: colors.bg.base, paddingTop: headerHeight }]}>
       <Stack.Screen options={{ headerShown: false }} />
-
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.bg.base,
-            marginBottom: spacing[2],
-          },
-        ]}
-      >
-        <TouchableOpacity
-          onPress={() => {
-            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.back();
-          }}
-          style={[
-            styles.backButton,
-            {
-              borderRadius: radius.full,
-              backgroundColor: colors.bg.raised,
-              borderColor: colors.border.secondary,
-              borderWidth: 0.5,
-            },
-          ]}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <ChevronLeft size={24} color={colors.fg.default} strokeWidth={2} />
-        </TouchableOpacity>
-        <View
-          style={[
-            styles.titlePill,
-            {
-              borderRadius: radius.full,
-              backgroundColor: colors.bg.raised,
-              borderColor: colors.border.secondary,
-              borderWidth: 0.5,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.headerTitle,
-              { color: colors.fg.default, fontFamily: fonts.sans.semibold },
-            ]}
-          >
-            Normal Font
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={() =>
-            {
+      <PluginHeader
+        title="Normal Font"
+        colors={colors}
+        onBack={() => router.back()}
+        rightAccessory={(
+          <TouchableOpacity
+            onPress={() => {
               void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               Alert.alert(
                 "Normal Font",
                 "Used for UI text, labels, and most readable content.\n\nChoose a clean, balanced font for long reading sessions.\nIt has the biggest impact on overall app readability."
               );
-            }
-          }
-          style={[
-            styles.rightPlaceholder,
-            {
-              borderRadius: radius.full,
-              backgroundColor: colors.bg.raised,
-              borderColor: colors.border.secondary,
-              borderWidth: 0.5,
-            },
-          ]}
-          activeOpacity={0.7}
-        >
-          <Info size={18} color={colors.fg.muted} strokeWidth={2} />
-        </TouchableOpacity>
-      </View>
+            }}
+            style={{ padding: 8 }}
+            activeOpacity={0.7}
+          >
+            <Info size={18} color={colors.fg.muted} strokeWidth={2} />
+          </TouchableOpacity>
+        )}
+      />
 
-      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-        <View style={{ paddingHorizontal: spacing[4] }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingTop: spacing[3] }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={{ paddingHorizontal: spacing[3] }}>
           {normalFontIds.map((id) => {
             const family = normalFamilies[id];
             return (
@@ -202,35 +155,6 @@ export default function NormalFontPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-    height: 64,
-    paddingBottom: 10,
-  },
-  backButton: {
-    width: 45,
-    height: 45,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  titlePill: {
-    minHeight: 45,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  headerTitle: {
-    fontSize: 16,
-  },
-  rightPlaceholder: {
-    width: 45,
-    height: 45,
-    alignItems: "center",
-    justifyContent: "center",
   },
   fontOption: {
     flexDirection: "column",

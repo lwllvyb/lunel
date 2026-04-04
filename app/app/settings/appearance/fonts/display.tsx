@@ -1,9 +1,10 @@
 import { useTheme } from "@/contexts/ThemeContext";
+import PluginHeader, { usePluginHeaderHeight } from "@/components/PluginHeader";
 import {
   DisplayFamilyId,
   displayFamilies,
 } from "@/constants/themes";
-import { ChevronLeft, Check, Info } from "lucide-react-native";
+import { Check, Info } from "lucide-react-native";
 import { Stack, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 
@@ -19,7 +20,7 @@ interface FontOptionProps {
 }
 
 function FontOption({ name, sampleText, fontFamily, isSelected, onSelect }: FontOptionProps) {
-  const { colors, fonts, spacing, radius } = useTheme();
+  const { colors, fonts, spacing, radius, typography } = useTheme();
 
   return (
     <TouchableOpacity
@@ -28,17 +29,17 @@ function FontOption({ name, sampleText, fontFamily, isSelected, onSelect }: Font
         styles.fontOption,
         {
           backgroundColor: isSelected ? colors.accent.default + '20' : colors.bg.raised,
-          borderRadius: 18,
-          padding: spacing[4],
-          marginBottom: spacing[3],
+          borderRadius: 10,
+          padding: spacing[3],
+          marginBottom: spacing[2],
         },
       ]}
     >
       <View style={styles.fontOptionHeader}>
         <Text
           style={{
-            fontSize: 16,
-            fontFamily: fonts.sans.semibold,
+            fontSize: typography.body,
+            fontFamily: fonts.sans.medium,
             color: isSelected ? colors.accent.default : colors.fg.default,
           }}
         >
@@ -61,7 +62,7 @@ function FontOption({ name, sampleText, fontFamily, isSelected, onSelect }: Font
       </View>
       <Text
         style={{
-          fontSize: 18,
+          fontSize: typography.caption,
           fontFamily: fontFamily,
           color: colors.fg.muted,
           marginTop: spacing[2],
@@ -83,88 +84,40 @@ export default function DisplayFontPage() {
     setDisplayFont,
   } = useTheme();
   const router = useRouter();
+  const headerHeight = usePluginHeaderHeight();
 
   const displayFontIds = Object.keys(displayFamilies) as DisplayFamilyId[];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg.base }]}>
+    <View style={[styles.container, { backgroundColor: colors.bg.base, paddingTop: headerHeight }]}>
       <Stack.Screen options={{ headerShown: false }} />
-
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.bg.base,
-            marginBottom: spacing[2],
-          },
-        ]}
-      >
-        <TouchableOpacity
-          onPress={() => {
-            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.back();
-          }}
-          style={[
-            styles.backButton,
-            {
-              borderRadius: radius.full,
-              backgroundColor: colors.bg.raised,
-              borderColor: colors.border.secondary,
-              borderWidth: 0.5,
-            },
-          ]}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <ChevronLeft size={24} color={colors.fg.default} strokeWidth={2} />
-        </TouchableOpacity>
-        <View
-          style={[
-            styles.titlePill,
-            {
-              borderRadius: radius.full,
-              backgroundColor: colors.bg.raised,
-              borderColor: colors.border.secondary,
-              borderWidth: 0.5,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.headerTitle,
-              { color: colors.fg.default, fontFamily: fonts.sans.semibold },
-            ]}
-          >
-            Display Font
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={() =>
-            {
+      <PluginHeader
+        title="Display Font"
+        colors={colors}
+        onBack={() => router.back()}
+        rightAccessory={(
+          <TouchableOpacity
+            onPress={() => {
               void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               Alert.alert(
                 "Display Font",
                 "Used for headings and branding elements.\n\nBest for titles and visual emphasis, not long paragraphs.\nA stronger style here changes the app's personality quickly."
               );
-            }
-          }
-          style={[
-            styles.rightPlaceholder,
-            {
-              borderRadius: radius.full,
-              backgroundColor: colors.bg.raised,
-              borderColor: colors.border.secondary,
-              borderWidth: 0.5,
-            },
-          ]}
-          activeOpacity={0.7}
-        >
-          <Info size={18} color={colors.fg.muted} strokeWidth={2} />
-        </TouchableOpacity>
-      </View>
+            }}
+            style={{ padding: 8 }}
+            activeOpacity={0.7}
+          >
+            <Info size={18} color={colors.fg.muted} strokeWidth={2} />
+          </TouchableOpacity>
+        )}
+      />
 
-      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-        <View style={{ paddingHorizontal: spacing[4] }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingTop: spacing[3] }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={{ paddingHorizontal: spacing[3] }}>
           {displayFontIds.map((id) => {
             const family = displayFamilies[id];
             return (
@@ -190,35 +143,6 @@ export default function DisplayFontPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-    height: 64,
-    paddingBottom: 10,
-  },
-  backButton: {
-    width: 45,
-    height: 45,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  titlePill: {
-    minHeight: 45,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  headerTitle: {
-    fontSize: 16,
-  },
-  rightPlaceholder: {
-    width: 45,
-    height: 45,
-    alignItems: "center",
-    justifyContent: "center",
   },
   fontOption: {
     flexDirection: "column",

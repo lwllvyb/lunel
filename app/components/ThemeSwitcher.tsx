@@ -18,7 +18,7 @@ interface ThemeCardData {
 const THEME_OPTIONS: ThemeOption[] = ["system", "light", "dark"];
 
 export function ThemeSwitcher() {
-  const { selectedTheme, setTheme, colors, fonts, radius, spacing } = useTheme();
+  const { selectedTheme, setTheme, colors, fonts, radius, spacing, typography } = useTheme();
 
   // Build theme options with preview colors
   const themeOptions: ThemeCardData[] = THEME_OPTIONS.map((id) => {
@@ -41,7 +41,7 @@ export function ThemeSwitcher() {
   return (
     <ScrollView
       style={{ backgroundColor: colors.bg.base, flex: 1 }}
-      contentContainerStyle={{ padding: spacing[4] }}
+      contentContainerStyle={{ padding: spacing[3] }}
     >
       {themeOptions.map((theme) => {
         const isSelected = selectedTheme === theme.id;
@@ -53,9 +53,9 @@ export function ThemeSwitcher() {
             activeOpacity={0.7}
             style={{
               backgroundColor: isSelected ? colors.accent.default + '20' : colors.bg.raised,
-              borderRadius: 18,
-              padding: spacing[4],
-              marginBottom: spacing[3],
+              borderRadius: 10,
+              padding: spacing[3],
+              marginBottom: spacing[2],
             }}
           >
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -63,8 +63,8 @@ export function ThemeSwitcher() {
                 <Text
                   style={{
                     color: colors.fg.default,
-                    fontSize: 16,
-                    fontFamily: fonts.sans.semibold,
+                    fontSize: typography.body,
+                    fontFamily: fonts.sans.medium,
                     marginBottom: spacing[1],
                   }}
                 >
@@ -74,9 +74,9 @@ export function ThemeSwitcher() {
                 <Text
                   style={{
                     color: colors.fg.muted,
-                    fontSize: 13,
+                    fontSize: typography.caption,
                     fontFamily: fonts.sans.regular,
-                    lineHeight: 18,
+                    lineHeight: 16,
                   }}
                 >
                   {theme.description}
@@ -92,7 +92,7 @@ export function ThemeSwitcher() {
                     backgroundColor: colors.accent.default,
                     alignItems: "center",
                     justifyContent: "center",
-                    marginLeft: spacing[3],
+                    marginLeft: spacing[2],
                   }}
                 >
                   <Check size={16} color={'#ffffff'} strokeWidth={3} />
@@ -101,13 +101,13 @@ export function ThemeSwitcher() {
             </View>
 
             {/* Color preview */}
-            <View style={{ flexDirection: "row", gap: spacing[2], marginTop: spacing[3] }}>
+            <View style={{ flexDirection: "row", gap: spacing[1], marginTop: spacing[2] }}>
               {theme.previewColors.map((color, index) => (
                 <View
                   key={index}
                   style={{
-                    width: 20,
-                    height: 20,
+                    width: 18,
+                    height: 18,
                     borderRadius: radius.full,
                     backgroundColor: color,
                     borderWidth: 1,

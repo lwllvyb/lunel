@@ -1,6 +1,7 @@
 import { useTheme } from "@/contexts/ThemeContext";
+import PluginHeader, { usePluginHeaderHeight } from "@/components/PluginHeader";
 import { lunelApi, StorageFileInfo } from "@/lib/storage";
-import { ChevronLeft, ChevronRight, RefreshCw, AlertTriangle, FolderOpen, FileText, X, Trash } from "lucide-react-native";
+import { ChevronRight, RefreshCw, AlertTriangle, FolderOpen, FileText, X, Trash } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 
@@ -22,6 +23,7 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 export default function StorageExplorerPage() {
   const { colors, fonts, radius, spacing } = useTheme();
   const router = useRouter();
+  const headerHeight = usePluginHeaderHeight();
 
   const [files, setFiles] = useState<StorageFileInfo[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -107,84 +109,28 @@ export default function StorageExplorerPage() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg.base }]}>
-
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.bg.base,
-            paddingHorizontal: 12,
-            height: 64,
-            paddingBottom: 10,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          onPress={() => {
-            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.back();
-          }}
-          style={[
-            styles.backButton,
-            {
-              borderRadius: radius.full,
-              width: 45,
-              height: 45,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: colors.bg.raised,
-              borderColor: colors.border.secondary,
-              borderWidth: 0.5,
-            },
-          ]}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <ChevronLeft size={24} color={colors.fg.default} strokeWidth={2} />
-        </TouchableOpacity>
-        <View
-          style={[
-            styles.titlePill,
-            {
-              borderRadius: radius.full,
-              backgroundColor: colors.bg.raised,
-              borderColor: colors.border.secondary,
-              borderWidth: 0.5,
-            },
-          ]}
-        >
-          <Text style={[styles.mainHeaderTitle, { color: colors.fg.default, fontFamily: fonts.sans.semibold }]}>
-            Storage Explorer
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => {
-            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            onRefresh();
-          }}
-          style={[
-            styles.backButton,
-            {
-              borderRadius: radius.full,
-              width: 45,
-              height: 45,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: colors.bg.raised,
-              borderColor: colors.border.secondary,
-              borderWidth: 0.5,
-            },
-          ]}
-        >
-          <RefreshCw size={20} color={colors.fg.muted} strokeWidth={2} />
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.bg.base, paddingTop: headerHeight }]}>
+      <PluginHeader
+        title="Storage Explorer"
+        colors={colors}
+        onBack={() => router.back()}
+        rightAccessory={(
+          <TouchableOpacity
+            onPress={() => {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onRefresh();
+            }}
+            style={{ padding: 8 }}
+          >
+            <RefreshCw size={20} color={colors.fg.muted} strokeWidth={2} />
+          </TouchableOpacity>
+        )}
+      />
 
       {/* Warning */}
       <View style={{
-        marginHorizontal: spacing[4],
-        marginBottom: spacing[3],
+        marginHorizontal: spacing[3],
+        marginBottom: spacing[2],
         padding: spacing[3],
         backgroundColor: '#f59e0b' + '15',
         borderRadius: radius.md,
@@ -223,14 +169,14 @@ export default function StorageExplorerPage() {
             </Text>
           </View>
         ) : (
-          <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 18, marginHorizontal: spacing[4] }]}>
+          <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 10, marginHorizontal: spacing[3] }]}>
             {files.map((file, index) => (
               <React.Fragment key={file.name}>
                 {index > 0 && (
                   <View style={[styles.divider, { backgroundColor: colors.border.tertiary }]} />
                 )}
                 <TouchableOpacity
-                  style={[styles.fileRow, { paddingVertical: spacing[3], paddingHorizontal: spacing[4] }]}
+                  style={[styles.fileRow, { paddingVertical: spacing[2], paddingHorizontal: spacing[3] }]}
                   onPress={() => openFile(file.name)}
                   activeOpacity={0.7}
                 >
@@ -311,7 +257,7 @@ export default function StorageExplorerPage() {
               <ScrollView showsVerticalScrollIndicator>
                 <Text
                   style={{
-                    padding: spacing[4],
+                    padding: spacing[3],
                     fontSize: 13,
                     fontFamily: fonts.mono.regular,
                     color: colors.fg.default,
@@ -349,18 +295,6 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
   },
-  mainHeaderTitle: {
-    fontSize: 16,
-  },
-  titlePill: {
-    minHeight: 45,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  placeholder: {
-    width: 40,
-  },
   content: {
     flex: 1,
   },
@@ -375,7 +309,7 @@ const styles = StyleSheet.create({
   rowLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 8,
   },
   iconContainer: {
     width: 32,

@@ -1,7 +1,7 @@
 import { useTheme } from "@/contexts/ThemeContext";
-import { ChevronRight, ChevronLeft, LucideIcon, Palette, Type, Code, Sparkles, MoonStar, Shell } from "lucide-react-native";
+import PluginHeader, { usePluginHeaderHeight } from "@/components/PluginHeader";
+import { ChevronRight, LucideIcon, Palette, Type, Code, Sparkles, MoonStar, Shell } from "lucide-react-native";
 import { useRouter } from "expo-router";
-import * as Haptics from "expo-haptics";
 
 import React from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -13,11 +13,11 @@ interface SettingsRowProps {
 }
 
 function SettingsRow({ icon: Icon, label, onPress }: SettingsRowProps) {
-  const { colors, fonts, radius, spacing } = useTheme();
+  const { colors, fonts, radius, spacing, typography } = useTheme();
 
   return (
     <TouchableOpacity
-      style={[styles.settingsRow, { paddingVertical: spacing[3], paddingHorizontal: spacing[4] }]}
+      style={[styles.settingsRow, { paddingVertical: spacing[2], paddingHorizontal: spacing[3] }]}
       onPress={onPress}
       activeOpacity={0.7}
     >
@@ -25,7 +25,7 @@ function SettingsRow({ icon: Icon, label, onPress }: SettingsRowProps) {
         <View style={[styles.iconContainer, { backgroundColor: colors.accent.default + '20', borderRadius: radius.md }]}>
           <Icon size={18} color={colors.accent.default} strokeWidth={2} />
         </View>
-        <Text style={[styles.rowLabel, { color: colors.fg.default, fontFamily: fonts.sans.regular }]}>
+        <Text style={[styles.rowLabel, { color: colors.fg.default, fontFamily: fonts.sans.regular, fontSize: typography.body }]}>
           {label}
         </Text>
       </View>
@@ -35,63 +35,20 @@ function SettingsRow({ icon: Icon, label, onPress }: SettingsRowProps) {
 }
 
 export default function SettingsPage() {
-  const { colors, fonts, radius, spacing } = useTheme();
+  const { colors, fonts, radius, spacing, typography } = useTheme();
   const router = useRouter();
+  const headerHeight = usePluginHeaderHeight();
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg.base }]}>
-
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.bg.base }]}>
-        <TouchableOpacity
-          onPress={() => {
-            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.back();
-          }}
-          style={[
-            styles.backButton,
-            {
-              borderRadius: radius.full,
-              backgroundColor: colors.bg.raised,
-              borderColor: colors.border.secondary,
-              borderWidth: 0.5,
-            },
-          ]}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <ChevronLeft size={24} color={colors.fg.default} strokeWidth={2} />
-        </TouchableOpacity>
-        <View
-          style={[
-            styles.titlePill,
-            {
-              borderRadius: radius.full,
-              backgroundColor: colors.bg.raised,
-              borderColor: colors.border.secondary,
-              borderWidth: 0.5,
-            },
-          ]}
-        >
-          <Text style={[styles.headerTitle, { color: colors.fg.default, fontFamily: fonts.sans.semibold }]}>
-            Settings
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.placeholder,
-            {
-              opacity: 0,
-            },
-          ]}
-        />
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.bg.base, paddingTop: headerHeight }]}>
+      <PluginHeader title="Settings" colors={colors} onBack={() => router.back()} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
         {/* Appearance Section */}
-        <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium }]}>
+        <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: typography.caption }]}>
           APPEARANCE
         </Text>
-        <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 18 }]}>
+        <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 10 }]}>
           <SettingsRow
             icon={Palette}
             label="Theme"
@@ -112,10 +69,10 @@ export default function SettingsPage() {
         </View>
 
         {/* Editor Section */}
-        <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium }]}>
+        <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: typography.caption }]}>
           EDITOR
         </Text>
-        <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 18 }]}>
+        <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 10 }]}>
           <SettingsRow
             icon={Code}
             label="Editor Settings"
@@ -123,10 +80,10 @@ export default function SettingsPage() {
           />
         </View>
 
-        <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium }]}>
+        <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: typography.caption }]}>
           APP
         </Text>
-        <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 18 }]}>
+        <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 10 }]}>
           <SettingsRow
             icon={MoonStar}
             label="App Settings"
@@ -140,10 +97,10 @@ export default function SettingsPage() {
           />
         </View>
 
-        <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium }]}>
+        <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: typography.caption }]}>
           AI
         </Text>
-        <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 18 }]}>
+        <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 10 }]}>
           <SettingsRow
             icon={Sparkles}
             label="AI Settings"
@@ -162,45 +119,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-    height: 64,
-    paddingBottom: 10,
-  },
-  backButton: {
-    width: 45,
-    height: 45,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  titlePill: {
-    minHeight: 45,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  headerTitle: {
-    fontSize: 16,
-  },
-  placeholder: {
-    width: 45,
-    height: 45,
-  },
   content: {
     flex: 1,
   },
   sectionHeader: {
-    fontSize: 12,
     letterSpacing: 0.5,
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 8,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 6,
   },
   section: {
-    marginHorizontal: 16,
+    marginHorizontal: 12,
     overflow: "hidden",
   },
   settingsRow: {
@@ -211,7 +140,7 @@ const styles = StyleSheet.create({
   rowLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 8,
   },
   iconContainer: {
     width: 32,
@@ -219,11 +148,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  rowLabel: {
-    fontSize: 16,
-  },
+  rowLabel: {},
   divider: {
     height: 1,
-    marginHorizontal: 16,
+    marginHorizontal: 12,
   },
 });

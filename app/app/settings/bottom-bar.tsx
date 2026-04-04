@@ -13,8 +13,9 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/contexts/ThemeContext';
+import PluginHeader, { usePluginHeaderHeight } from '@/components/PluginHeader';
 import { usePlugins, CORE_PLUGIN_IDS } from '@/plugins';
-import { Lock, Plus, Grid3x3, X, CheckCircle2, ChevronLeft } from 'lucide-react-native';
+import { Lock, Plus, Grid3x3, X, CheckCircle2 } from 'lucide-react-native';
 import { PluginDefinition } from '@/plugins/types';
 
 type SlotTarget = { type: 'row1' } | { type: 'row2'; index: number };
@@ -22,6 +23,7 @@ type SlotTarget = { type: 'row1' } | { type: 'row2'; index: number };
 export default function BottomBarSettings() {
   const { colors, fonts, spacing, radius } = useTheme();
   const router = useRouter();
+  const headerHeight = usePluginHeaderHeight();
   const {
     extraPlugins,
     getPlugin,
@@ -125,9 +127,9 @@ export default function BottomBarSettings() {
     return (
       <View style={{
         backgroundColor: colors.bg.raised,
-        borderRadius: 18,
-        padding: spacing[4],
-        marginHorizontal: spacing[4],
+        borderRadius: 10,
+        padding: spacing[3],
+        marginHorizontal: spacing[3],
         marginBottom: spacing[5],
       }}>
         <Text style={{
@@ -136,7 +138,7 @@ export default function BottomBarSettings() {
           color: colors.fg.muted,
           textTransform: 'uppercase',
           letterSpacing: 0.5,
-          marginBottom: spacing[3],
+          marginBottom: spacing[2],
           textAlign: 'center',
         }}>
           Preview
@@ -206,7 +208,7 @@ export default function BottomBarSettings() {
         style={{
           width: 72,
           height: 72,
-          borderRadius: 18,
+          borderRadius: 10,
           backgroundColor: colors.bg.raised,
           alignItems: 'center',
           justifyContent: 'center',
@@ -252,7 +254,7 @@ export default function BottomBarSettings() {
         style={{
           width: 72,
           height: 72,
-          borderRadius: 18,
+          borderRadius: 10,
           backgroundColor: isEmpty ? colors.bg.raised : colors.bg.raised,
           alignItems: 'center',
           justifyContent: 'center',
@@ -336,7 +338,7 @@ export default function BottomBarSettings() {
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: spacing[4],
+              padding: spacing[3],
             }}>
               <Text style={{
                 fontSize: 17,
@@ -350,7 +352,7 @@ export default function BottomBarSettings() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing[4], paddingTop: 0 }} keyboardDismissMode="on-drag">
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing[3], paddingTop: 0 }} keyboardDismissMode="on-drag">
               {/* Clear option if slot has a plugin */}
               {currentId && (
                 <TouchableOpacity
@@ -359,9 +361,9 @@ export default function BottomBarSettings() {
                     flexDirection: 'row',
                     alignItems: 'center',
                     padding: spacing[3],
-                    marginBottom: spacing[3],
+                    marginBottom: spacing[2],
                     backgroundColor: '#ef444420',
-                    borderRadius: 18,
+                    borderRadius: 10,
                     gap: spacing[3],
                   }}
                   activeOpacity={0.7}
@@ -402,7 +404,7 @@ export default function BottomBarSettings() {
                 color: colors.fg.muted,
                 textTransform: 'uppercase',
                 letterSpacing: 0.5,
-                marginBottom: spacing[3],
+                marginBottom: spacing[2],
               }}>
                 Available Plugins
               </Text>
@@ -436,7 +438,7 @@ export default function BottomBarSettings() {
                         padding: spacing[3],
                         marginBottom: spacing[2],
                         backgroundColor: isCurrentlySelected ? colors.accent.default + '20' : colors.bg.raised,
-                        borderRadius: 18,
+                        borderRadius: 10,
                         gap: spacing[3],
                       }}
                       activeOpacity={0.7}
@@ -489,63 +491,15 @@ export default function BottomBarSettings() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg.base }}>
-
-      {/* Header */}
-      <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: spacing[3],
-        height: 64,
-        paddingBottom: 10,
-      }}>
-        <TouchableOpacity
-          onPress={() => {
-            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.back();
-          }}
-          style={{
-            width: 45,
-            height: 45,
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: radius.full,
-            backgroundColor: colors.bg.raised,
-            borderColor: colors.border.secondary,
-            borderWidth: 0.5,
-          }}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <ChevronLeft size={24} color={colors.fg.default} strokeWidth={2} />
-        </TouchableOpacity>
-        <View style={{
-          minHeight: 45,
-          justifyContent: 'center',
-          alignItems: 'center',
-          paddingHorizontal: 20,
-          borderRadius: radius.full,
-          backgroundColor: colors.bg.raised,
-          borderColor: colors.border.secondary,
-          borderWidth: 0.5,
-        }}>
-          <Text style={{
-            fontSize: 16,
-            fontFamily: fonts.sans.semibold,
-            color: colors.fg.default,
-          }}>
-            Bottom Bar
-          </Text>
-        </View>
-        <View style={{ width: 45, height: 45, opacity: 0 }} />
-      </View>
+    <View style={{ flex: 1, backgroundColor: colors.bg.base, paddingTop: headerHeight }}>
+      <PluginHeader title="Bottom Bar" colors={colors} onBack={() => router.back()} />
 
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
         {/* Live Preview */}
         {renderPreview()}
 
         {/* Main Row Section */}
-        <View style={{ paddingHorizontal: spacing[4], marginBottom: spacing[5] }}>
+        <View style={{ paddingHorizontal: spacing[3], marginBottom: spacing[5] }}>
           <Text style={{
             fontSize: 14,
             fontFamily: fonts.sans.semibold,
@@ -558,7 +512,7 @@ export default function BottomBarSettings() {
             fontSize: 13,
             fontFamily: fonts.sans.regular,
             color: colors.fg.muted,
-            marginBottom: spacing[3],
+            marginBottom: spacing[2],
           }}>
             Core plugins are locked. Tap the last slot to customize.
           </Text>
@@ -574,7 +528,7 @@ export default function BottomBarSettings() {
         </View>
 
         {/* Quick Access Row Section */}
-        <View style={{ paddingHorizontal: spacing[4], marginBottom: spacing[5] }}>
+        <View style={{ paddingHorizontal: spacing[3], marginBottom: spacing[5] }}>
           <Text style={{
             fontSize: 14,
             fontFamily: fonts.sans.semibold,
@@ -587,7 +541,7 @@ export default function BottomBarSettings() {
             fontSize: 13,
             fontFamily: fonts.sans.regular,
             color: colors.fg.muted,
-            marginBottom: spacing[3],
+            marginBottom: spacing[2],
           }}>
             Tap any slot to add or change plugins.
           </Text>
