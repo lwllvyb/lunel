@@ -84,19 +84,22 @@ function joinStreamingText(previousText: string, nextChunk: string): string {
     return nextChunk;
   }
 
-  if (/[\s]$/.test(previousText) || /^[\s]/.test(nextChunk)) {
-    return `${previousText}${nextChunk}`;
+  if (nextChunk.startsWith(previousText)) {
+    return nextChunk;
   }
 
-  if (/^[.,!?;:)\]%}"'`]/.test(nextChunk)) {
-    return `${previousText}${nextChunk}`;
+  if (previousText.endsWith(nextChunk)) {
+    return previousText;
   }
 
-  if (/[(\[{/"'`]$/.test(previousText)) {
-    return `${previousText}${nextChunk}`;
+  const maxOverlap = Math.min(previousText.length, nextChunk.length);
+  for (let overlap = maxOverlap; overlap > 0; overlap -= 1) {
+    if (previousText.slice(-overlap) === nextChunk.slice(0, overlap)) {
+      return previousText + nextChunk.slice(overlap);
+    }
   }
 
-  return `${previousText} ${nextChunk}`;
+  return previousText + nextChunk;
 }
 
 export class CodexProvider implements AIProvider {
@@ -1567,15 +1570,15 @@ export class CodexProvider implements AIProvider {
 
   private extractTextPayload(payload: Record<string, unknown>): string | undefined {
     return (
-      this.readString(payload.delta)
-      ?? this.readString(payload.text)
-      ?? this.readString(payload.message)
-      ?? this.readString(this.asRecord(payload.item).text)
-      ?? this.readString(this.asRecord(payload.item).delta)
-      ?? this.readString(this.asRecord(payload.item).message)
-      ?? this.readString(this.asRecord(payload.event).text)
-      ?? this.readString(this.asRecord(payload.event).delta)
-      ?? this.readString(this.asRecord(payload.event).message)
+      this.readRawString(payload.delta)
+      ?? this.readRawString(payload.text)
+      ?? this.readRawString(payload.message)
+      ?? this.readRawString(this.asRecord(payload.item).text)
+      ?? this.readRawString(this.asRecord(payload.item).delta)
+      ?? this.readRawString(this.asRecord(payload.item).message)
+      ?? this.readRawString(this.asRecord(payload.event).text)
+      ?? this.readRawString(this.asRecord(payload.event).delta)
+      ?? this.readRawString(this.asRecord(payload.event).message)
     );
   }
 
@@ -1652,6 +1655,10 @@ export class CodexProvider implements AIProvider {
 
   private readArray(value: unknown): unknown[] {
     return Array.isArray(value) ? value : [];
+  }
+
+  private readRawString(value: unknown): string | undefined {
+    return typeof value === "string" ? value : undefined;
   }
 
   private readString(value: unknown): string | undefined {

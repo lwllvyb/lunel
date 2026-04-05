@@ -302,14 +302,14 @@ function findStreamingPartIndex(parts: AIPart[], incoming: AIPart): number {
   return -1;
 }
 
-function mergePartUpdate(previous: AIPart, incoming: AIPart): AIPart {
+function mergePartUpdate(previous: AIPart, incoming: AIPart, options?: { replaceText?: boolean }): AIPart {
   if ((incoming.type === "text" || incoming.type === "reasoning")
       && typeof previous.text === "string"
       && typeof incoming.text === "string") {
     return {
       ...previous,
       ...incoming,
-      text: mergeStreamingText(previous.text, incoming.text),
+      text: options?.replaceText ? incoming.text : mergeStreamingText(previous.text, incoming.text),
     };
   }
 
@@ -2200,6 +2200,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
           const sessId = (part?.sessionID as string) || (msgInfo?.sessionID as string) || (props.sessionID as string);
           const msgId = (part?.messageID as string) || (msgInfo?.id as string) || (props.messageID as string);
           const partId = part?.id as string | undefined;
+          const shouldReplaceStreamingText = event.backend === "codex" && !!partId;
           if (sessId && msgId && part != null) {
             const nextActivityLabel = deriveActivityLabelFromPart(part);
             if (nextActivityLabel) {
@@ -2218,7 +2219,9 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
                   ? msg.parts.findIndex((p) => (p as any).id === partId)
                   : findStreamingPartIndex(msg.parts, part);
                 if (existingPartIdx >= 0) {
-                  msg.parts[existingPartIdx] = mergePartUpdate(msg.parts[existingPartIdx], part);
+                  msg.parts[existingPartIdx] = mergePartUpdate(msg.parts[existingPartIdx], part, {
+                    replaceText: shouldReplaceStreamingText,
+                  });
                 } else {
                   msg.parts.push(part);
                 }
