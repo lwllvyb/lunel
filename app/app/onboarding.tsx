@@ -193,21 +193,11 @@ function WelcomePage() {
   );
 }
 
-const CONNECT_POINTS = [
-  "Run one command, scan a QR code, and you're in",
-  "Full terminal with real shell access",
-  "Edit code with syntax highlighting & git built in",
-  "Everything runs on your own machine",
-  "End-to-end encrypted, nothing leaves your device",
-];
+const CONNECT_DESC =
+  "Bridge your local machine to your phone. Run a command, scan a QR code, and get full terminal, editor, and git access on your device.";
 
-const CLOUD_POINTS = [
-  "Spin up a full dev environment in seconds",
-  "No machine, no setup, no installs",
-  "Persistent sandboxes that survive across sessions",
-  "Code from any device, anywhere in the world",
-  "Isolated and secure: each sandbox is yours alone",
-];
+const CLOUD_DESC =
+  "A full cloud dev environment spun up for you. No machine needed, no setup, just open and start coding from anywhere.";
 
 function ProductModePage() {
   const { colors, fonts } = useTheme();
@@ -247,14 +237,9 @@ function ProductModePage() {
             </Text>
           </View>
 
-          <View style={{ gap: 7, marginBottom: 14 }}>
-            {CONNECT_POINTS.map((point) => (
-              <View key={point} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: colors.fg.muted }} />
-                <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: colors.fg.muted, flex: 1 }}>{point}</Text>
-              </View>
-            ))}
-          </View>
+          <Text style={{ fontSize: 13, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 21, marginBottom: 14 }}>
+            {CONNECT_DESC}
+          </Text>
 
           <View style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, backgroundColor: colors.bg.raised }}>
             <Ionicons name="gift" size={14} color={colors.fg.default} />
@@ -276,14 +261,9 @@ function ProductModePage() {
             </View>
           </View>
 
-          <View style={{ gap: 7, marginBottom: 14 }}>
-            {CLOUD_POINTS.map((point) => (
-              <View key={point} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: colors.fg.muted }} />
-                <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: colors.fg.muted, flex: 1 }}>{point}</Text>
-              </View>
-            ))}
-          </View>
+          <Text style={{ fontSize: 13, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 21, marginBottom: 14 }}>
+            {CLOUD_DESC}
+          </Text>
 
           <View style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, backgroundColor: colors.bg.raised }}>
             <FontAwesome name="tag" size={14} color={colors.fg.muted} />
@@ -312,7 +292,7 @@ type Feature = {
 const FEATURES: Feature[] = [
   {
     name: "AI Agents",
-    description: "Your AI coding partner, built into the workspace",
+    description: "Run Codex and OpenCode straight from the app.",
     points: [
       "Run Codex and OpenCode inside your workspace",
       "50+ models including Claude, GPT-4o, Gemini, and more",
@@ -364,7 +344,7 @@ const FEATURES: Feature[] = [
   },
   {
     name: "Terminal",
-    description: "A real shell, not a wrapper",
+    description: "Run commands, scripts, and builds from your device.",
     points: [
       "Run anything you can run on your desktop",
       "Sessions stay alive even when you disconnect",
@@ -376,7 +356,7 @@ const FEATURES: Feature[] = [
     color: "#10b981",
   },
   {
-    name: "Version Control",
+    name: "Git",
     description: "Full Git workflow without leaving the app",
     points: [
       "Stage files or individual hunks with precision",
@@ -460,7 +440,7 @@ function FeatureCard({ feature }: { feature: Feature }) {
   return (
     <View style={{ backgroundColor: colors.bg.raised, borderRadius: 14, padding: 12 }}>
       {/* Icon + name row */}
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 6 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         <View
           style={{
             width: 36,
@@ -484,20 +464,6 @@ function FeatureCard({ feature }: { feature: Feature }) {
         </View>
       </View>
 
-      {/* Divider */}
-      <View style={{ height: 0.5, backgroundColor: colors.fg.default + "10", marginVertical: 8 }} />
-
-      {/* Bullet points */}
-      <View style={{ gap: 5 }}>
-        {feature.points.map((point) => (
-          <View key={point} style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
-            <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: feature.color + "bb", marginTop: 5, flexShrink: 0 }} />
-            <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 17, flex: 1 }}>
-              {point}
-            </Text>
-          </View>
-        ))}
-      </View>
     </View>
   );
 }
@@ -917,6 +883,11 @@ export default function OnboardingScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const dotAnims = useRef(PAGES.map((_, i) => new Animated.Value(i === 0 ? 1 : 0))).current;
+  const skipAnim = useRef(new Animated.Value(0)).current;
+
+  const isLastPage = currentIndex === PAGES.length - 1;
+  const isReviewPage = currentIndex === 3;
+  const showReviewButton = isReviewPage && Platform.OS === "ios";
 
   useEffect(() => {
     PAGES.forEach((_, i) => {
@@ -929,9 +900,14 @@ export default function OnboardingScreen() {
     });
   }, [currentIndex]);
 
-  const isLastPage = currentIndex === PAGES.length - 1;
-  const isReviewPage = currentIndex === 3;
-  const showReviewButton = isReviewPage && Platform.OS === "ios";
+  useEffect(() => {
+    Animated.timing(skipAnim, {
+      toValue: showReviewButton ? 1 : 0,
+      duration: 300,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: false,
+    }).start();
+  }, [showReviewButton]);
   const IOS_REVIEW_URL = "https://apps.apple.com/app/apple-store/id6759504065?action=write-review";
 
   const handleComplete = async () => {
@@ -1019,7 +995,24 @@ export default function OnboardingScreen() {
             {showReviewButton ? "Leave a Review" : isLastPage ? "Get Started" : "Continue"}
           </Text>
         </Pressable>
+
+        <Animated.View style={{
+          maxHeight: skipAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 36] }),
+          opacity: skipAnim,
+          overflow: "hidden",
+          alignItems: "center",
+          justifyContent: "center",
+        }}>
+          <Pressable
+            onPress={handleNext}
+            style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+          >
+            <Text style={{ fontSize: 13, fontFamily: fonts.sans.medium, color: colors.fg.muted }}>Skip</Text>
+          </Pressable>
+        </Animated.View>
+
       </View>
+
     </View>
   );
 }

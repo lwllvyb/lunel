@@ -641,6 +641,15 @@ export default function Auth() {
           </View>
         </View>
 
+        <TouchableOpacity
+          onPress={() => router.push("/onboarding")}
+          activeOpacity={0.5}
+          style={{ alignItems: "center", marginBottom: 14 }}
+        >
+          <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: colors.fg.muted }}>
+            View onboarding
+          </Text>
+        </TouchableOpacity>
         <Text style={[styles.legal, isTablet && styles.legalTablet, { color: colors.fg.muted, fontFamily: fonts.sans.regular }]}>
           By continuing, you agree to our{" "}
           <Text style={[styles.legalLink, { color: colors.fg.default, fontFamily: fonts.sans.regular }]} onPress={() => openExternalUrl(TERMS_URL)}>
