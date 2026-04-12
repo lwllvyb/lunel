@@ -10,6 +10,7 @@ import {
   QrCode,
   Smartphone,
   SquareTerminal,
+  Terminal,
 } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -191,18 +192,31 @@ function WelcomePage() {
   );
 }
 
-const CONNECT_COLOR = "#8b5cf6";
-const CLOUD_COLOR = "#38bdf8";
+const CONNECT_POINTS = [
+  "Run one command, scan a QR code, and you're in",
+  "Full terminal with real shell access",
+  "Edit code with syntax highlighting & git built in",
+  "Everything runs on your own machine",
+  "End-to-end encrypted, nothing leaves your device",
+];
+
+const CLOUD_POINTS = [
+  "Spin up a full dev environment in seconds",
+  "No machine, no setup, no installs",
+  "Persistent sandboxes that survive across sessions",
+  "Code from any device, anywhere in the world",
+  "Isolated and secure: each sandbox is yours alone",
+];
 
 function ProductModePage() {
-  const { colors, fonts, isDark } = useTheme();
+  const { colors, fonts } = useTheme();
 
   return (
     <View style={{ width: SCREEN_WIDTH, flex: 1, paddingHorizontal: 28 }}>
 
-      {/* Top — heading + tags */}
-      <View style={{ paddingTop: 35, marginBottom: 44 }}>
-        <Text style={{ fontSize: 25, fontFamily: fonts.sans.semibold, color: colors.fg.default, lineHeight: 32, marginBottom: 4 }}>
+      {/* Header */}
+      <View style={{ paddingTop: 35, marginBottom: 36 }}>
+        <Text style={{ fontSize: 25, fontFamily: fonts.sans.semibold, color: colors.fg.default, lineHeight: 32, marginBottom: 6 }}>
           Two ways to ship
         </Text>
         <Text style={{ fontSize: 14, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 22, marginBottom: 16 }}>
@@ -221,48 +235,57 @@ function ProductModePage() {
       </View>
 
       {/* Lunel Connect */}
-      <View style={{ flexDirection: "row", gap: 18, marginBottom: 36 }}>
-        {/* Icon */}
-        <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: CONNECT_COLOR + "18", alignItems: "center", justifyContent: "center" }}>
-          <Ionicons name="scan-outline" size={24} color={CONNECT_COLOR} />
-        </View>
-
-        {/* Content */}
-        <View style={{ flex: 1, paddingTop: 4 }}>
-          <Text style={{ fontSize: 19, fontFamily: fonts.sans.semibold, color: colors.fg.default, marginBottom: 6 }}>
+      <View style={{ marginBottom: 28 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
+          <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.bg.raised, alignItems: "center", justifyContent: "center" }}>
+            <Ionicons name="scan-outline" size={18} color={colors.fg.default} />
+          </View>
+          <Text style={{ fontSize: 17, fontFamily: fonts.sans.semibold, color: colors.fg.default }}>
             Lunel Connect
           </Text>
-          <Text style={{ fontSize: 13, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 21, marginBottom: 14 }}>
-            Run one command and scan. Your terminal, editor, and git — all live on your phone. Everything stays on your machine.
-          </Text>
-          {/* Command pill */}
-          <View style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, backgroundColor: CONNECT_COLOR + "12" }}>
-            <Ionicons name="terminal-outline" size={12} color={CONNECT_COLOR} />
-            <Text style={{ fontFamily: fonts.mono.regular, fontSize: 12, color: CONNECT_COLOR }}>npx lunel-cli</Text>
-          </View>
+        </View>
+
+        <View style={{ gap: 7, marginBottom: 14 }}>
+          {CONNECT_POINTS.map((point) => (
+            <View key={point} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: colors.fg.muted }} />
+              <Text style={{ fontSize: 13, fontFamily: fonts.sans.regular, color: colors.fg.muted, flex: 1 }}>{point}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, backgroundColor: colors.bg.raised }}>
+          <Terminal size={14} color={colors.fg.muted} strokeWidth={2} />
+          <Text style={{ fontFamily: fonts.mono.regular, fontSize: 12, color: colors.fg.default }}>npx lunel-cli</Text>
         </View>
       </View>
 
       {/* Lunel Cloud */}
-      <View style={{ flexDirection: "row", gap: 18 }}>
-        {/* Icon — no connector below */}
-        <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: CLOUD_COLOR + "18", alignItems: "center", justifyContent: "center" }}>
-          <Entypo name="cloud" size={24} color={CLOUD_COLOR} />
+      <View>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
+          <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.bg.raised, alignItems: "center", justifyContent: "center" }}>
+            <Entypo name="cloud" size={18} color={colors.fg.default} />
+          </View>
+          <Text style={{ fontSize: 17, fontFamily: fonts.sans.semibold, color: colors.fg.default }}>
+            Lunel Cloud
+          </Text>
+          <View style={{ paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, backgroundColor: "#22c55e18" }}>
+            <Text style={{ fontSize: 9, fontFamily: fonts.sans.semibold, color: "#22c55e", letterSpacing: 0.6 }}>COMING SOON</Text>
+          </View>
         </View>
 
-        {/* Content */}
-        <View style={{ flex: 1, paddingTop: 4 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
-            <Text style={{ fontSize: 19, fontFamily: fonts.sans.semibold, color: colors.fg.default }}>
-              Lunel Cloud
-            </Text>
-            <View style={{ paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, backgroundColor: CLOUD_COLOR + "18" }}>
-              <Text style={{ fontSize: 9, fontFamily: fonts.sans.semibold, color: CLOUD_COLOR, letterSpacing: 0.6 }}>COMING SOON</Text>
+        <View style={{ gap: 7, marginBottom: 14 }}>
+          {CLOUD_POINTS.map((point) => (
+            <View key={point} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: colors.fg.muted }} />
+              <Text style={{ fontSize: 13, fontFamily: fonts.sans.regular, color: colors.fg.muted, flex: 1 }}>{point}</Text>
             </View>
-          </View>
-          <Text style={{ fontSize: 13, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 21 }}>
-            No laptop? No problem. Spin up a secure cloud sandbox instantly — zero setup, code from anywhere.
-          </Text>
+          ))}
+        </View>
+
+        <View style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, backgroundColor: colors.bg.raised }}>
+          <FontAwesome name="tag" size={14} color={colors.fg.muted} />
+          <Text style={{ fontFamily: fonts.sans.medium, fontSize: 12, color: colors.fg.default }}>Competitively priced</Text>
         </View>
       </View>
 
