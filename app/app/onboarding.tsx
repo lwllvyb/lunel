@@ -805,6 +805,7 @@ export default function OnboardingScreen() {
           paddingHorizontal: 24,
           paddingBottom: Math.max(insets.bottom, 12),
           paddingTop: 8,
+          marginBottom: 24,
           gap: 16,
           opacity: bottomEntrance,
           transform: [{ translateY: bottomEntrance.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }],
