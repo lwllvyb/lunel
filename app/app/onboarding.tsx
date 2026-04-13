@@ -452,35 +452,93 @@ function CopyableCommand({ command, fonts, colors }: { command: string; fonts: R
 }
 
 const ENCRYPTION_POINTS = [
-  { icon: "shield-lock" as const, label: "Zero-knowledge design", sub: "Your code is encrypted before it ever leaves your machine. We have no access to it." },
-  { icon: "key" as const, label: "Session keys, not stored", sub: "Each connection generates a one-time key. Once the session ends, the key is gone." },
-  { icon: "eye-off" as const, label: "No server snooping", sub: "Traffic passes through our relay encrypted end-to-end. Even we can't read it." },
-  { icon: "lock-closed" as const, label: "Open source & auditable", sub: "The entire codebase is public. You can verify every claim we make." },
+  {
+    icon: "shield-checkmark" as const,
+    label: "Encrypted on your device",
+    sub: "Locked before it leaves your machine.",
+    color: "#6366f1",
+  },
+  {
+    icon: "eye-off" as const,
+    label: "We can't read your data",
+    sub: "Even our servers see nothing.",
+    color: "#8b5cf6",
+  },
+  {
+    icon: "analytics" as const,
+    label: "Zero tracking",
+    sub: "No analytics. No telemetry. Nothing.",
+    color: "#10b981",
+  },
+  {
+    icon: "key" as const,
+    label: "One-time session keys",
+    sub: "Fresh key every session. Gone after.",
+    color: "#f59e0b",
+  },
+  {
+    icon: "logo-github" as const,
+    label: "Open source",
+    sub: "Every line on GitHub. Verify it yourself.",
+    color: "#3b82f6",
+  },
 ];
 
 function EncryptionPage() {
   const { colors, fonts } = useTheme();
+  const shieldAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(shieldAnim, {
+      toValue: 1,
+      duration: 600,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  const shieldScale = shieldAnim.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] });
 
   return (
     <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 28, paddingBottom: 90 }}>
-        <View style={{ paddingTop: 35, marginBottom: 32 }}>
-          <Text style={{ fontSize: 24, fontFamily: fonts.sans.semibold, color: colors.fg.default, lineHeight: 30, marginBottom: 6 }}>
-            Your code stays yours
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 90 }}>
+
+        {/* Hero */}
+        <View style={{ alignItems: "center", paddingTop: 40, marginBottom: 32 }}>
+          <Animated.View style={{ opacity: shieldAnim, transform: [{ scale: shieldScale }], marginBottom: 20 }}>
+            <View style={{ width: 80, height: 80, borderRadius: 24, backgroundColor: "#6366f118", alignItems: "center", justifyContent: "center" }}>
+              <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: "#6366f130", alignItems: "center", justifyContent: "center" }}>
+                <MaterialCommunityIcons name="shield-lock" size={30} color="#6366f1" />
+              </View>
+            </View>
+          </Animated.View>
+
+          <Text style={{ fontSize: 26, fontFamily: fonts.sans.semibold, color: colors.fg.default, textAlign: "center", lineHeight: 33, marginBottom: 8 }}>
+            Private by design
           </Text>
-          <Text style={{ fontSize: 14, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 22 }}>
-            End-to-end encrypted. Nothing leaves your machine unprotected.
+          <Text style={{ fontSize: 14, fontFamily: fonts.sans.regular, color: colors.fg.muted, textAlign: "center", lineHeight: 22, maxWidth: 270 }}>
+            End-to-end encrypted. We track nothing.
           </Text>
+
+          {/* Zero tracking pill */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 16, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: "#10b98118", borderWidth: 1, borderColor: "#10b98130" }}>
+            <Ionicons name="checkmark-circle" size={14} color="#10b981" />
+            <Text style={{ fontSize: 12, fontFamily: fonts.sans.semibold, color: "#10b981" }}>No analytics · No telemetry · No tracking</Text>
+          </View>
         </View>
 
-        <View style={{ gap: 16 }}>
+        {/* Points */}
+        <View style={{ gap: 10 }}>
           {ENCRYPTION_POINTS.map((point) => (
-            <View key={point.label} style={{ flexDirection: "row", alignItems: "flex-start", gap: 14 }}>
-              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.bg.raised, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Ionicons name={point.icon as any} size={17} color={colors.fg.default} />
+            <View
+              key={point.label}
+              style={{ flexDirection: "row", alignItems: "flex-start", gap: 14, backgroundColor: colors.bg.raised, borderRadius: 14, padding: 14 }}
+            >
+              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: point.color + "18", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Ionicons name={point.icon as any} size={17} color={point.color} />
               </View>
               <View style={{ flex: 1, paddingTop: 2 }}>
-                <Text style={{ fontSize: 14, fontFamily: fonts.sans.semibold, color: colors.fg.default, marginBottom: 3 }}>
+                <Text style={{ fontSize: 13.5, fontFamily: fonts.sans.semibold, color: colors.fg.default, marginBottom: 3 }}>
                   {point.label}
                 </Text>
                 <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 18 }}>
@@ -490,6 +548,8 @@ function EncryptionPage() {
             </View>
           ))}
         </View>
+
+
       </ScrollView>
 
       <LinearGradient
