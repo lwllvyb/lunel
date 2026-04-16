@@ -57,6 +57,8 @@ import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import Feather from "@expo/vector-icons/Feather";
 import Fontisto from "@expo/vector-icons/Fontisto";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import Foundation from "@expo/vector-icons/Foundation";
 import { Audio } from "expo-av";
 import Svg, { Path } from "react-native-svg";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -1695,6 +1697,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
   // UI state
   const [inputText, setInputText] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [pendingImage, setPendingImage] = useState<AIFileAttachment | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingSessionId, setStreamingSessionId] = useState<string | null>(null);
@@ -2498,85 +2501,80 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
   }, [resetEqualizer]);
 
   const handleAttachment = useCallback(() => {
-    Alert.alert("Attach", "Choose an option", [
-      {
-        text: "Select from Gallery",
-        onPress: async () => {
-          try {
-            const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (!permission.granted) {
-              Alert.alert("Photos Permission", "Photo library permission is required to upload images.");
-              return;
-            }
-            const result = await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ["images"],
-              quality: 0.9,
-              base64: false,
-              allowsMultipleSelection: false,
-              presentationStyle: Platform.OS === "ios" ? ImagePicker.UIImagePickerPresentationStyle.FULL_SCREEN : undefined,
-              preferredAssetRepresentationMode: Platform.OS === "ios"
-                ? ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible
-                : undefined,
-              shouldDownloadFromNetwork: Platform.OS === "ios",
-            });
-            if (result.canceled || !result.assets?.[0]) return;
-            const asset = result.assets[0];
-            const mime = inferImageMime(asset.uri, asset.mimeType);
-            const filename = asset.fileName || asset.uri.split("/").pop() || "image";
-            const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
-            setPendingImage({ type: "file", mime, filename, url: `data:${mime};base64,${base64}` });
-          } catch (err) {
-            console.error("Gallery pick error:", err);
-            Alert.alert("Error", "Failed to pick image");
-          }
-        },
-      },
-      {
-        text: "Take Photo",
-        onPress: async () => {
-          try {
-            const permission = await ImagePicker.requestCameraPermissionsAsync();
-            if (!permission.granted) {
-              Alert.alert("Camera Permission", "Camera permission is required to take photos.");
-              return;
-            }
-            const result = await ImagePicker.launchCameraAsync({
-              mediaTypes: ["images"],
-              quality: 0.9,
-              base64: false,
-              presentationStyle: Platform.OS === "ios" ? ImagePicker.UIImagePickerPresentationStyle.FULL_SCREEN : undefined,
-            });
-            if (result.canceled || !result.assets?.[0]) return;
-            const asset = result.assets[0];
-            const mime = inferImageMime(asset.uri, asset.mimeType);
-            const filename = asset.fileName || asset.uri.split("/").pop() || "photo";
-            const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
-            setPendingImage({ type: "file", mime, filename, url: `data:${mime};base64,${base64}` });
-          } catch (err) {
-            console.error("Camera error:", err);
-            Alert.alert("Error", "Failed to take photo");
-          }
-        },
-      },
-      {
-        text: "Choose File",
-        onPress: async () => {
-          try {
-            const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true });
-            if (result.canceled || !result.assets?.[0]) return;
-            const asset = result.assets[0];
-            const mime = asset.mimeType || "application/octet-stream";
-            const filename = asset.name;
-            const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
-            setPendingImage({ type: "file", mime, filename, url: `data:${mime};base64,${base64}` });
-          } catch (err) {
-            console.error("Document pick error:", err);
-            Alert.alert("Error", "Failed to pick file");
-          }
-        },
-      },
-      { text: "Cancel", style: "cancel" },
-    ]);
+    setShowAttachMenu(prev => !prev);
+  }, []);
+
+  const handleAttachGallery = useCallback(async () => {
+    setShowAttachMenu(false);
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("Photos Permission", "Photo library permission is required to upload images.");
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        quality: 0.9,
+        base64: false,
+        allowsMultipleSelection: false,
+        presentationStyle: Platform.OS === "ios" ? ImagePicker.UIImagePickerPresentationStyle.FULL_SCREEN : undefined,
+        preferredAssetRepresentationMode: Platform.OS === "ios"
+          ? ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible
+          : undefined,
+        shouldDownloadFromNetwork: Platform.OS === "ios",
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      const mime = inferImageMime(asset.uri, asset.mimeType);
+      const filename = asset.fileName || asset.uri.split("/").pop() || "image";
+      const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
+      setPendingImage({ type: "file", mime, filename, url: `data:${mime};base64,${base64}` });
+    } catch (err) {
+      console.error("Gallery pick error:", err);
+      Alert.alert("Error", "Failed to pick image");
+    }
+  }, []);
+
+  const handleAttachCamera = useCallback(async () => {
+    setShowAttachMenu(false);
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("Camera Permission", "Camera permission is required to take photos.");
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ["images"],
+        quality: 0.9,
+        base64: false,
+        presentationStyle: Platform.OS === "ios" ? ImagePicker.UIImagePickerPresentationStyle.FULL_SCREEN : undefined,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      const mime = inferImageMime(asset.uri, asset.mimeType);
+      const filename = asset.fileName || asset.uri.split("/").pop() || "photo";
+      const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
+      setPendingImage({ type: "file", mime, filename, url: `data:${mime};base64,${base64}` });
+    } catch (err) {
+      console.error("Camera error:", err);
+      Alert.alert("Error", "Failed to take photo");
+    }
+  }, []);
+
+  const handleAttachFile = useCallback(async () => {
+    setShowAttachMenu(false);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      const mime = asset.mimeType || "application/octet-stream";
+      const filename = asset.name;
+      const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
+      setPendingImage({ type: "file", mime, filename, url: `data:${mime};base64,${base64}` });
+    } catch (err) {
+      console.error("Document pick error:", err);
+      Alert.alert("Error", "Failed to pick file");
+    }
   }, []);
 
   const handlePickImage = useCallback(async () => {
@@ -3329,6 +3327,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
                   borderRadius: 12,
                   borderCurve: 'continuous',
                   opacity: isVoiceMode ? 0 : 1,
+                  zIndex: showAttachMenu ? 200 : 10,
                 },
               ]}
               onLayout={(e) => {
@@ -3423,16 +3422,63 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
               ) : null}
 
               <View style={styles.composerBottomBar}>
+                {showAttachMenu && (
+                  <Pressable
+                    style={{ position: "absolute", top: -9999, left: -9999, right: -9999, bottom: -9999, zIndex: 998 }}
+                    onPress={() => setShowAttachMenu(false)}
+                  />
+                )}
+                {showAttachMenu && (
+                  <View style={{
+                    position: "absolute",
+                    bottom: "100%",
+                    left: 0,
+                    marginBottom: 8,
+                    backgroundColor: colors.bg.raised,
+                    borderRadius: 8,
+                    borderWidth: 0.5,
+                    borderColor: colors.border.secondary,
+                    overflow: "hidden",
+                    paddingVertical: 4,
+                    minWidth: 150,
+                    zIndex: 999,
+                  }}>
+                    <TouchableOpacity
+                      onPress={handleAttachGallery}
+                      activeOpacity={0.7}
+                      style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 7 }}
+                    >
+                      <Foundation name="photo" size={15} color={colors.fg.default} />
+                      <Text style={{ color: colors.fg.default, fontFamily: fonts.sans.regular, fontSize: typography.list }}>Select from Gallery</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={handleAttachCamera}
+                      activeOpacity={0.7}
+                      style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 7 }}
+                    >
+                      <Feather name="camera" size={14} color={colors.fg.default} />
+                      <Text style={{ color: colors.fg.default, fontFamily: fonts.sans.regular, fontSize: typography.list }}>Take Photo</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={handleAttachFile}
+                      activeOpacity={0.7}
+                      style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 7 }}
+                    >
+                      <Fontisto name="paperclip" size={13} color={colors.fg.default} />
+                      <Text style={{ color: colors.fg.default, fontFamily: fonts.sans.regular, fontSize: typography.list }}>Choose File</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
                 <View pointerEvents={isVoiceMode ? "none" : "auto"} style={styles.composerRow}>
                   {/* Left group: attachment + model + codex prefs */}
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0, overflow: "hidden" }}>
                     <TouchableOpacity
-                      style={[styles.actionButton, { borderRadius: 9999, overflow: "visible", flexShrink: 0, flexGrow: 0 }]}
+                      style={[styles.actionButton, { borderRadius: 8, overflow: "visible", flexShrink: 0, flexGrow: 0, backgroundColor: showAttachMenu ? colors.bg.elevated : "transparent" }]}
                       onPress={handleAttachment}
                       activeOpacity={0.7}
                       disabled={isVoiceBusy}
                     >
-                      <Fontisto name="paperclip" size={18} color={colors.fg.default} />
+                      <Plus size={19} color={colors.fg.default} strokeWidth={2.4} />
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -3475,7 +3521,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
                       disabled={isVoiceBusy}
                       activeOpacity={0.7}
                     >
-                      <Feather name="mic" size={18} color={colors.fg.default} />
+                      <Feather name="mic" size={17} color={colors.fg.default} />
                     </TouchableOpacity>
 
                   {isStreaming ? (

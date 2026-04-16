@@ -312,6 +312,7 @@ export const fonts: ThemeFonts = buildFonts(DEFAULT_FONT_SELECTION);
 
 export interface ThemeTypography {
   caption: number;
+  list: number;
   subHeading: number;
   body: number;
   heading: number;
@@ -319,6 +320,7 @@ export interface ThemeTypography {
 
 export const typography: ThemeTypography = {
   caption: 11,
+  list: 12,
   subHeading: 13,
   body: 14,
   heading: 15,
@@ -385,6 +387,7 @@ export interface ThemeColors {
   bg: {
     base: string;       // Page canvas
     raised: string;     // Cards, inputs, sidebars
+    elevated: string;   // Slightly brighter than raised — popovers, dropdowns
   };
 
   // Foreground/text (use opacity for hierarchy)
@@ -451,6 +454,7 @@ const lightTheme: ThemeColors = {
   bg: {
     base: '#ffffff',
     raised: '#F5F5F5',
+    elevated: '#F9F9F9',
   },
   fg: {
     default: '#0a0a0a',
@@ -501,6 +505,7 @@ const darkTheme: ThemeColors = {
   bg: {
     base: '#161616',
     raised: '#212121',
+    elevated: '#2A2A2A',
   },
   fg: {
     default: '#fafafa',
