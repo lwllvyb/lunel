@@ -1668,6 +1668,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
   const [sessionTabs, setSessionTabs] = useState<AITab[]>([]);
   const [draftTabs, setDraftTabs] = useState<AITab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [pendingBackend, setPendingBackend] = useState<AiBackend | null>(null);
   const [messagesMap, setMessagesMap] = useState<Record<string, AIMessage[]>>({});
 
   // Config state
@@ -1796,7 +1797,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
     return tabs.find((t) => t.id === activeTabId)?.sessionId || null;
   }, [tabs, activeTabId]);
   const activeTab = useMemo(() => tabs.find((t) => t.id === activeTabId) ?? null, [tabs, activeTabId]);
-  const activeBackend: AiBackend = activeTab?.backend ?? "opencode";
+  const activeBackend: AiBackend = activeTab?.backend ?? pendingBackend ?? "opencode";
   const agents = agentsByBackend[activeBackend] || [];
   const modelOptions = modelOptionsByBackend[activeBackend] || [];
   const selectedAgent = selectedAgentByBackend[activeBackend] || "";
@@ -2312,34 +2313,12 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
     setBackendPickerVisible(true);
   };
 
-  const createNewTabWithBackend = async (backend: "opencode" | "codex") => {
+  const createNewTabWithBackend = (backend: "opencode" | "codex") => {
     setBackendPickerVisible(false);
-    const draftId = Date.now().toString();
-    const fallbackTitle = `Session ${tabs.length + 1}`;
-    const draftTab: AITab = {
-      id: draftId,
-      title: fallbackTitle,
-      backend,
-      updatedAt: Date.now(),
-    };
-    setDraftTabs((prev) => [...prev, draftTab]);
-    setMessagesMap((prev) => ({ ...prev, [draftId]: [] }));
-    setActiveTabId(draftId);
+    setPendingBackend(backend);
+    setActiveTabId(null);
     setInputText("");
-
-    try {
-      const session = await ai.createSession(fallbackTitle, backend);
-      setDraftTabs((prev) => prev.filter((t) => t.id !== draftId));
-      setMessagesMap((prev) => {
-        const next = { ...prev };
-        delete next[draftId];
-        return { ...next, [session.id]: [] };
-      });
-      setSessionTabs((prev) => mergeSessionTabs(prev, [{ ...session, backend } as AISession]));
-      setActiveTabId(session.id);
-    } catch {
-      // draft tab stays, user can still type
-    }
+    setPendingImage(null);
   };
 
   const closeTab = (tabId: string) => {
@@ -2388,6 +2367,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
   };
 
   const handleTabPress = useCallback(async (tabId: string) => {
+    setPendingBackend(null);
     setActiveTabId(tabId);
     const tab = tabs.find((t) => t.id === tabId);
     if (tab?.sessionId && !messagesMap[tab.sessionId]) {
@@ -2631,25 +2611,36 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
 
     // Get or create session
     const activeTab = tabs.find((t) => t.id === activeTabId);
-    const activeBackend: "opencode" | "codex" = activeTab?.backend ?? "opencode";
-    const selectedAgentForBackend = activeBackend === "opencode" ? selectedAgent : undefined;
+    const messageBackend: "opencode" | "codex" = activeTab?.backend ?? pendingBackend ?? "opencode";
+    const selectedAgentForBackend = messageBackend === "opencode" ? selectedAgent : undefined;
     let sessId = activeSessionId;
     if (!sessId) {
       try {
-        const fallbackTitle = `Session ${tabs.length + 1}`;
-        const session = await ai.createSession(fallbackTitle, activeBackend);
+        const session = await ai.createSession(undefined, messageBackend);
         sessId = session.id;
-        const newTab: AITab = {
-          id: session.id,
-          title: session.title || fallbackTitle,
-          sessionId: session.id,
-          backend: activeBackend,
-          updatedAt: session.time?.updated,
-        };
-        setSessionTabs((prev) => mergeSessionTabs(prev, [{ ...session, backend: activeBackend } as AISession]));
-        if (activeTabId) {
-          setDraftTabs((prev) => prev.filter((t) => t.id !== activeTabId));
-        }
+        const sessionTitle = (session.title || "").trim() || (messageBackend === "codex" ? "Codex" : "OpenCode");
+        setSessionTabs((prev) => mergeSessionTabs(prev, [{ ...session, backend: messageBackend } as AISession]));
+        setPendingBackend(null);
+        const currentActiveTabId = activeTabId;
+        setDraftTabs((prev) => prev.filter((t) => t.id !== currentActiveTabId));
+        setMessagesMap((prev) => {
+          if (!currentActiveTabId || currentActiveTabId === session.id) return prev;
+          const draftMessages = prev[currentActiveTabId];
+          if (!draftMessages) return prev;
+          const next = { ...prev };
+          delete next[currentActiveTabId];
+          next[session.id] = draftMessages;
+          return next;
+        });
+        setSessionTabs((prev) => {
+          const existing = prev.find((t) => t.sessionId === session.id && t.backend === messageBackend);
+          if (!existing) return prev;
+          return prev.map((t) => (
+            t.sessionId === session.id && t.backend === messageBackend
+              ? { ...t, title: sessionTitle }
+              : t
+          ));
+        });
         setActiveTabId(session.id);
       } catch (err) {
         Alert.alert("Error", "Failed to create AI session");
@@ -2663,29 +2654,29 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
       try {
         switch (cmd) {
           case "undo": {
-            if (activeBackend === "codex") {
+            if (messageBackend === "codex") {
               throw new Error("Codex undo is not supported in Lunel yet");
             }
             const msgs = messagesMap[sessId] || [];
             const lastUserMsg = [...msgs].reverse().find((m) => m.role === "user");
-            if (lastUserMsg) await ai.revert(sessId, lastUserMsg.id, activeBackend);
+            if (lastUserMsg) await ai.revert(sessId, lastUserMsg.id, messageBackend);
             break;
           }
           case "redo":
-            if (activeBackend === "codex") {
+            if (messageBackend === "codex") {
               throw new Error("Codex redo is not supported in Lunel yet");
             }
-            await ai.unrevert(sessId, activeBackend);
+            await ai.unrevert(sessId, messageBackend);
             break;
           case "abort":
-            await ai.abort(sessId, activeBackend);
+            await ai.abort(sessId, messageBackend);
             setIsStreaming(false);
             break;
           case "init":
-            if (activeBackend === "codex") {
+            if (messageBackend === "codex") {
               throw new Error("Codex init is not supported in Lunel yet");
             }
-            await ai.runCommand(sessId, "init", activeBackend);
+            await ai.runCommand(sessId, "init", messageBackend);
             break;
           default:
             await ai.sendPrompt(
@@ -2693,7 +2684,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
               text,
               getModelRef(),
               selectedAgentForBackend,
-              activeBackend,
+              messageBackend,
               undefined,
               getCodexPromptOptions(),
             );
@@ -2750,7 +2741,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
         text,
         getModelRef(),
         selectedAgentForBackend,
-        activeBackend,
+        messageBackend,
         pendingImage ? [pendingImage] : undefined,
         getCodexPromptOptions(),
       );
@@ -3145,7 +3136,13 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
 
       {/* Header */}
       <Header
-        title={activeTab ? formatBackendSessionTitle(activeTab.backend, activeTab.title) : "AI"}
+        title={
+          activeTab
+            ? formatBackendSessionTitle(activeTab.backend, activeTab.title)
+            : pendingBackend
+              ? formatBackendSessionTitle(pendingBackend)
+              : "AI"
+        }
         colors={colors}
         showBottomBorder={tabs.length > 0}
         rightAccessory={(
