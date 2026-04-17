@@ -1145,9 +1145,11 @@ function ExplorationGroup({
                   ? <BookOpen size={15} color={colors.fg.muted} strokeWidth={2} />
                   : <Search size={15} color={colors.fg.muted} strokeWidth={2} />}
               </View>
-              <Text style={{ color: colors.fg.muted, fontSize: typography.subHeading, fontFamily: fonts.sans.regular, flex: 1 }}>
-                {entry.line}
-              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
+                <Text style={{ color: colors.fg.muted, fontSize: typography.subHeading, fontFamily: fonts.sans.regular }}>
+                  {entry.line}
+                </Text>
+              </ScrollView>
             </View>
           ))}
         </View>
@@ -4353,14 +4355,10 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   commandGroupBody: {
-    marginTop: 0,
-    gap: 4,
-    paddingVertical: 10,
+    marginTop: 4,
   },
   explorationGroupBody: {
-    marginTop: 0,
-    gap: 4,
-    paddingVertical: 10,
+    marginTop: 4,
   },
   groupListRowWrap: {
   },
@@ -4368,7 +4366,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingLeft: 2,
+    paddingVertical: 4,
   },
 
   // Reasoning
@@ -4382,7 +4380,8 @@ const styles = StyleSheet.create({
   reasoningBody: {
     padding: 10,
     borderWidth: 1,
-    marginTop: 6,
+    marginTop: 4,
+    marginBottom: 4,
     marginHorizontal: -4,
   },
 
