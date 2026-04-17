@@ -273,11 +273,14 @@ export default function ToolCall({
 
   const isError = state === "error";
   const isCompleted = state === "completed";
-  const inputText = isCommandRow ? null : formatToolInput(part.input, toolName);
+  const formattedInputText = formatToolInput(part.input, toolName);
+  const commandDetailText = isCommandRow ? (formattedInputText || commandPreview) : null;
+  const inputText = isCommandRow ? null : formattedInputText;
   const outputText = formatToolOutput(part.output);
   const showDiffViewer = !!outputText && looksLikeDiff(outputText);
   const canExpand = Boolean(
-    inputText
+    commandDetailText
+    || inputText
     || outputText
     || (isError && part.error != null)
     || permission
@@ -295,8 +298,8 @@ export default function ToolCall({
         onPress={canExpand ? () => setExpanded(!expanded) : undefined}
         style={[
           styles.header,
-          groupedRow ? styles.groupedHeader : undefined,
-          expanded ? { backgroundColor: colors.bg.raised } : undefined,
+          groupedRow || isCommandRow ? styles.groupedHeader : undefined,
+          expanded ? [styles.expandedHeader, { backgroundColor: colors.bg.raised }] : undefined,
           isCommandRow && expanded ? styles.headerExpandedTop : undefined,
           isCommandRow && useCompactCommandRow && !groupedRow ? styles.compactCommandHeader : undefined,
         ]}
@@ -366,6 +369,31 @@ export default function ToolCall({
               },
             ]}
         >
+          {/* Command */}
+          {isCommandRow && commandDetailText && (
+            <View style={styles.section}>
+              <Text style={[styles.sectionLabel, { color: colors.fg.subtle, fontFamily: fonts.sans.medium }]}>
+                Command
+              </Text>
+              <View
+                style={[
+                  styles.monoBox,
+                  { backgroundColor: colors.bg.base, borderRadius: BOX_RADIUS },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.sectionContent,
+                    { color: colors.fg.muted, fontFamily: fonts.mono.regular },
+                  ]}
+                  selectable
+                >
+                  {commandDetailText}
+                </Text>
+              </View>
+            </View>
+          )}
+
           {/* Input */}
           {!isCommandRow && inputText && (
             <View style={styles.section}>
@@ -486,6 +514,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     borderRadius: 10,
   },
+  expandedHeader: {
+    borderRadius: 10,
+  },
   compactCommandHeader: {
     paddingHorizontal: 0,
     paddingVertical: 0,
@@ -546,9 +577,9 @@ const styles = StyleSheet.create({
     padding: 10,
     gap: 8,
     marginTop: 3,
+    marginHorizontal: -4,
   },
   groupedBody: {
-    marginHorizontal: -4,
   },
   diffList: {
     gap: 8,
