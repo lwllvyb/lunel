@@ -341,7 +341,6 @@ export default function ToolCall({
             </View>
           )}
         </View>
-        {canExpand ? <InlineChevronIcon size={14} color={colors.fg.muted} expanded={expanded} /> : null}
       </TouchableOpacity>
 
       {expanded && canExpand && (

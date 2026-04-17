@@ -496,7 +496,6 @@ function ReasoningPartView({ part }: { part: AIPart }) {
             Thinking
           </Text>
         </View>
-        <InlineChevronIcon size={14} color={colors.fg.muted} expanded={expanded} />
       </TouchableOpacity>
       {expanded && text ? (
         <View style={[styles.reasoningBody, { borderColor: colors.bg.raised, backgroundColor: colors.bg.raised, borderRadius: radius.md }]}>
@@ -1136,7 +1135,6 @@ function ExplorationGroup({
             {summary}
           </Text>
         </View>
-        <InlineChevronIcon size={16} color={colors.fg.muted} expanded={expanded} />
       </TouchableOpacity>
       {expanded ? (
         <View style={styles.explorationGroupBody}>
@@ -1193,7 +1191,6 @@ function CommandPartsDropdown({
             {label}
           </Text>
         </View>
-        <InlineChevronIcon size={16} color={colors.fg.muted} expanded={expanded} />
       </TouchableOpacity>
       {expanded ? (
         <View style={styles.commandGroupBody}>
@@ -4356,19 +4353,16 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   commandGroupBody: {
-    marginTop: 8,
+    marginTop: 0,
     gap: 4,
-    paddingHorizontal: 10,
     paddingVertical: 10,
   },
   explorationGroupBody: {
-    marginTop: 8,
+    marginTop: 0,
     gap: 4,
-    paddingHorizontal: 10,
     paddingVertical: 10,
   },
   groupListRowWrap: {
-    paddingLeft: 2,
   },
   groupListRow: {
     flexDirection: "row",
@@ -4388,7 +4382,8 @@ const styles = StyleSheet.create({
   reasoningBody: {
     padding: 10,
     borderWidth: 1,
-    marginTop: 4,
+    marginTop: 6,
+    marginHorizontal: -4,
   },
 
   // Step
