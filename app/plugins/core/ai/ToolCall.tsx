@@ -9,6 +9,7 @@ import {
 import { SquaresSubtract } from "lucide-react-native";
 import Svg, { Path } from "react-native-svg";
 import { useEditorConfig } from "@/contexts/EditorContext";
+import { typography } from "@/constants/themes";
 import type { AIPart, AIPermission, PermissionResponse } from "./types";
 import { looksLikeDiff, parseDiffChunks, classifyDiffLine } from "./diff";
 
@@ -242,6 +243,7 @@ interface ToolCallProps {
   permission?: AIPermission | null;
   onPermissionReply?: (response: PermissionResponse) => void;
   compactCommandRow?: boolean;
+  groupedRow?: boolean;
 }
 
 export default function ToolCall({
@@ -252,6 +254,7 @@ export default function ToolCall({
   permission,
   onPermissionReply,
   compactCommandRow = false,
+  groupedRow = false,
 }: ToolCallProps) {
   const [expanded, setExpanded] = useState(false);
   const { config } = useEditorConfig();
@@ -262,6 +265,9 @@ export default function ToolCall({
   const headerLabel = commandPreview || toolName;
   const state = (part.state as string) || "running";
   const bodyFontSize = config.aiFontSize;
+  const headerFontSize = groupedRow ? typography.subHeading : bodyFontSize;
+  const headerFontFamily = groupedRow ? fonts.sans.regular : fonts.mono.regular;
+  const headerColor = groupedRow ? colors.fg.muted : colors.fg.default;
 
   const isError = state === "error";
   const isCompleted = state === "completed";
@@ -313,7 +319,7 @@ export default function ToolCall({
                 <Text
                   style={[
                     styles.toolName,
-                    { color: colors.fg.default, fontFamily: fonts.mono.regular, fontSize: bodyFontSize },
+                    { color: headerColor, fontFamily: headerFontFamily, fontSize: headerFontSize },
                   ]}
                   numberOfLines={expanded ? undefined : 1}
                 >
@@ -326,7 +332,7 @@ export default function ToolCall({
               <Text
                 style={[
                   styles.toolName,
-                  { color: colors.fg.default, fontFamily: fonts.mono.regular, fontSize: bodyFontSize },
+                  { color: headerColor, fontFamily: headerFontFamily, fontSize: headerFontSize },
                 ]}
                 numberOfLines={1}
               >

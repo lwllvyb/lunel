@@ -1121,7 +1121,7 @@ function ExplorationGroup({
       <TouchableOpacity
         onPress={() => setExpanded((value) => !value)}
         activeOpacity={0.7}
-        style={styles.commandGroupHeader}
+        style={[styles.commandGroupHeader, expanded ? { backgroundColor: colors.bg.raised } : null]}
       >
         <View style={styles.commandGroupHeaderLeft}>
           <View style={[styles.commandGroupIconFrame, { borderColor: `${colors.fg.subtle}4D` }]}>
@@ -1136,12 +1136,14 @@ function ExplorationGroup({
       {expanded ? (
         <View style={styles.explorationGroupBody}>
           {entries.map((line, index) => (
-            <Text
-              key={`${line}:${index}`}
-              style={{ color: colors.fg.muted, fontSize: 12, fontFamily: fonts.mono.regular }}
-            >
-              {line}
-            </Text>
+            <View key={`${line}:${index}`} style={styles.groupListRow}>
+              <View style={[styles.commandGroupIconFrame, { borderColor: `${colors.fg.subtle}4D` }]}>
+                <SquaresSubtract size={15} color={colors.fg.muted} strokeWidth={2} />
+              </View>
+              <Text style={{ color: colors.fg.muted, fontSize: typography.subHeading, fontFamily: fonts.sans.regular, flex: 1 }}>
+                {line}
+              </Text>
+            </View>
           ))}
         </View>
       ) : null}
@@ -1174,7 +1176,7 @@ function CommandPartsDropdown({
       <TouchableOpacity
         onPress={() => setExpanded((value) => !value)}
         activeOpacity={0.7}
-        style={styles.commandGroupHeader}
+        style={[styles.commandGroupHeader, expanded ? { backgroundColor: colors.bg.raised } : null]}
       >
         <View style={styles.commandGroupHeaderLeft}>
           <View style={[styles.commandGroupIconFrame, { borderColor: `${colors.fg.subtle}4D` }]}>
@@ -1189,7 +1191,7 @@ function CommandPartsDropdown({
       {expanded ? (
         <View style={styles.commandGroupBody}>
           {commandParts.map((part, index) => (
-            <View key={String((part as any).id || `command-part-${index}`)}>
+            <View key={String((part as any).id || `command-part-${index}`)} style={styles.groupListRowWrap}>
               <MessagePartView
                 part={part}
                 isUser={false}
@@ -1199,6 +1201,7 @@ function CommandPartsDropdown({
                 showDetailedView={showDetailedView}
                 pendingPermission={pendingPermission}
                 onPermissionReply={onPermissionReply}
+                groupedRow
               />
             </View>
           ))}
@@ -1217,6 +1220,7 @@ function MessagePartView({
   showDetailedView,
   pendingPermission,
   onPermissionReply,
+  groupedRow = false,
 }: {
   part: AIPart;
   isUser: boolean;
@@ -1226,6 +1230,7 @@ function MessagePartView({
   showDetailedView: boolean;
   pendingPermission?: AIPermission | null;
   onPermissionReply?: (response: PermissionResponse) => void;
+  groupedRow?: boolean;
 }) {
   switch (part.type) {
     case "text":
@@ -1243,6 +1248,7 @@ function MessagePartView({
           radius={radius}
           permission={pendingPermission}
           onPermissionReply={onPermissionReply}
+          groupedRow={groupedRow}
         />
       );
     case "file-change":
@@ -4318,12 +4324,14 @@ const styles = StyleSheet.create({
   commandGroupContainer: {
   },
   commandGroupHeader: {
-    paddingHorizontal: 2,
-    paddingVertical: 6,
+    marginHorizontal: -4,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
+    borderRadius: 10,
   },
   commandGroupHeaderLeft: {
     flexDirection: "row",
@@ -4341,14 +4349,24 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   commandGroupBody: {
-    marginTop: 4,
-    gap: 4,
+    marginTop: 8,
+    gap: 8,
+    paddingLeft: 12,
   },
   explorationGroupBody: {
-    marginTop: 4,
-    gap: 10,
-    paddingLeft: 18,
+    marginTop: 8,
+    gap: 8,
+    paddingLeft: 12,
     paddingTop: 2,
+  },
+  groupListRowWrap: {
+    paddingLeft: 2,
+  },
+  groupListRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingLeft: 2,
   },
 
   // Reasoning
