@@ -510,14 +510,14 @@ function StepStartView({ part }: { part: AIPart }) {
   const { colors, fonts } = useTheme();
   const title = (part.title as string) || "";
 
+  if (!title) return null;
+
   return (
     <View style={styles.stepContainer}>
       <View style={styles.stepContent}>
-        {title ? (
-          <Text style={{ color: colors.fg.subtle, fontSize: 11, fontFamily: fonts.mono.regular }}>
-            {title}
-          </Text>
-        ) : null}
+        <Text style={{ color: colors.fg.subtle, fontSize: 11, fontFamily: fonts.mono.regular }}>
+          {title}
+        </Text>
       </View>
     </View>
   );
@@ -856,10 +856,13 @@ function isGroupablePart(part: AIPart): boolean {
 function isHiddenMetaPart(part: AIPart): boolean {
   if (part.type === "step-start" || part.type === "step-finish") return true;
   if (part.type === "text") {
-    return isHiddenAssistantMetaText((part.text as string) || "");
+    const text = (part.text as string) || "";
+    if (!text.trim()) return true;
+    return isHiddenAssistantMetaText(text);
   }
   if (part.type === "reasoning") {
     const text = ((part.text as string) || (typeof part.reasoning === "string" ? part.reasoning : "")).trim();
+    if (!text) return true;
     return isHiddenAssistantMetaText(text);
   }
   return false;
