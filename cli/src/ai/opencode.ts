@@ -419,6 +419,7 @@ export class OpenCodeProvider implements AIProvider {
         }
 
         console.log("[sse] Event stream ended, reconnecting...");
+        attempt++;
       } catch (err) {
         if (this.shuttingDown) return;
         attempt++;
@@ -491,6 +492,57 @@ export class OpenCodeProvider implements AIProvider {
       this.refreshPendingQuestions(),
       this.refreshSessionStatuses(),
     ]);
+    await this.refreshBusySessionMessages();
+  }
+
+  private async refreshBusySessionMessages(): Promise<void> {
+    const server = this.server;
+    const authHeader = this.authHeader;
+    if (!server || !authHeader) return;
+
+    const statusUrl = new URL("/session/status", server.url);
+    const statusResp = await fetch(statusUrl, {
+      headers: { Authorization: authHeader, accept: "application/json" },
+    }).catch(() => null);
+    if (!statusResp?.ok) return;
+
+    const payload = await statusResp.json().catch(() => null) as Record<string, unknown> | null;
+    if (!payload || typeof payload !== "object") return;
+
+    for (const [sessionId, status] of Object.entries(payload)) {
+      const statusObj = status as Record<string, unknown>;
+      const statusType = typeof statusObj?.type === "string" ? statusObj.type.toLowerCase() : "";
+      if (statusType !== "busy") continue;
+
+      try {
+        const response = await this.client!.session.messages({ path: { id: sessionId } });
+        const raw = Array.isArray(response.data) ? response.data : [];
+
+        for (const m of raw) {
+          const msgObj = this.asRecord(m as Record<string, unknown>);
+          const info = this.asRecord(msgObj.info as Record<string, unknown>);
+          const parts = Array.isArray(msgObj.parts) ? msgObj.parts : [];
+          const msgId = this.readString(info.id);
+          if (!msgId) continue;
+
+          this.emitter?.({ type: "message.updated", properties: { info } });
+
+          for (const part of parts) {
+            const partObj = this.asRecord(part as Record<string, unknown>);
+            this.emitter?.({
+              type: "message.part.updated",
+              properties: {
+                part: { ...partObj, sessionID: sessionId, messageID: msgId },
+                message: { sessionID: sessionId, id: msgId, role: info.role },
+              },
+            });
+          }
+        }
+        console.log(`[sse] Re-synced messages for busy session ${sessionId} after reconnect`);
+      } catch (err) {
+        console.warn(`[sse] Failed to refresh messages for busy session ${sessionId}:`, (err as Error).message);
+      }
+    }
   }
 
   private async refreshSessionsMetadata(): Promise<void> {
