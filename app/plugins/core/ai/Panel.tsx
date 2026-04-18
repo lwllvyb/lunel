@@ -2831,7 +2831,52 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
     }
   };
 
-  const closeTab = (tabId: string) => {
+  const deleteTab = useCallback((tabId: string) => {
+    const tab = tabs.find((t) => t.id === tabId);
+
+    // Optimistic update — remove immediately
+    setSessionTabs((prev) => prev.filter((t) => t.id !== tabId));
+    setDraftTabs((prev) => prev.filter((t) => t.id !== tabId));
+    if (tab?.sessionId) {
+      setMessagesMap((prev) => {
+        const next = { ...prev };
+        delete next[tab.sessionId];
+        return next;
+      });
+      setErrorMessages((prev) => {
+        const next = { ...prev };
+        delete next[tab.sessionId];
+        return next;
+      });
+    }
+    const newTabs = tabs.filter((t) => t.id !== tabId);
+    if (activeTabId === tabId && newTabs.length > 0) {
+      const index = tabs.findIndex((t) => t.id === tabId);
+      const newActiveTab = newTabs[Math.max(0, index - 1)];
+      setActiveTabId(newActiveTab.id);
+    } else if (newTabs.length === 0) {
+      setActiveTabId(null);
+    }
+
+    // Fire-and-forget delete — rollback on failure
+    if (tab?.sessionId) {
+      void (async () => {
+        try {
+          const deleted = await ai.deleteSession(tab.sessionId, tab.backend);
+          if (!deleted) {
+            setSessionTabs((prev) => [...prev, tab]);
+            Alert.alert("Unable to Delete", "The session could not be deleted.");
+          }
+        } catch (err) {
+          setSessionTabs((prev) => [...prev, tab]);
+          const message = err instanceof Error ? err.message : "The session could not be deleted.";
+          Alert.alert("Unable to Delete", message);
+        }
+      })();
+    }
+  }, [tabs, activeTabId, ai]);
+
+  const closeTab = useCallback((tabId: string) => {
     Alert.alert(
       "Delete Session",
       "Are you sure you want to delete this session?",
@@ -2840,54 +2885,11 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => {
-            const tab = tabs.find((t) => t.id === tabId);
-
-            // Optimistic update — remove immediately
-            setSessionTabs((prev) => prev.filter((t) => t.id !== tabId));
-            setDraftTabs((prev) => prev.filter((t) => t.id !== tabId));
-            if (tab?.sessionId) {
-              setMessagesMap((prev) => {
-                const next = { ...prev };
-                delete next[tab.sessionId!];
-                return next;
-              });
-              setErrorMessages((prev) => {
-                const next = { ...prev };
-                delete next[tab.sessionId!];
-                return next;
-              });
-            }
-            const newTabs = tabs.filter((t) => t.id !== tabId);
-            if (activeTabId === tabId && newTabs.length > 0) {
-              const index = tabs.findIndex((t) => t.id === tabId);
-              const newActiveTab = newTabs[Math.max(0, index - 1)];
-              setActiveTabId(newActiveTab.id);
-            } else if (newTabs.length === 0) {
-              setActiveTabId(null);
-            }
-
-            // Fire-and-forget delete — rollback on failure
-            if (tab?.sessionId) {
-              void (async () => {
-                try {
-                  const deleted = await ai.deleteSession(tab.sessionId!, tab.backend);
-                  if (!deleted) {
-                    setSessionTabs((prev) => [...prev, tab]);
-                    Alert.alert("Unable to Delete", "The session could not be deleted.");
-                  }
-                } catch (err) {
-                  setSessionTabs((prev) => [...prev, tab]);
-                  const message = err instanceof Error ? err.message : "The session could not be deleted.";
-                  Alert.alert("Unable to Delete", message);
-                }
-              })();
-            }
-          },
+          onPress: () => deleteTab(tabId),
         },
       ],
     );
-  };
+  }, [deleteTab]);
 
   const renameTab = (tabId: string, nextTitle: string) => {
     const tab = tabs.find((t) => t.id === tabId);
@@ -3661,11 +3663,11 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
       activeSessionId: tabs.some((t) => t.id === activeTabId && !!t.sessionId) ? activeTabId : null,
       loading: status === 'connected' && (!isInitialized || isInitialSessionsLoading),
       onSessionPress: handleTabPress,
-      onSessionClose: closeTab,
+      onSessionClose: deleteTab,
       onSessionRename: renameTab,
       onCreateSession: createNewTab,
     });
-  }, [tabs, activeTabId, status, isInitialized, isInitialSessionsLoading, register, handleTabPress, closeTab, renameTab, createNewTab]);
+  }, [tabs, activeTabId, status, isInitialized, isInitialSessionsLoading, register, handleTabPress, deleteTab, renameTab, createNewTab]);
 
   useEffect(() => () => unregister('ai'), [unregister]);
 

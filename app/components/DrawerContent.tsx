@@ -382,7 +382,7 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
                                       activeOpacity={0.6}
                                       style={{ opacity: 0.7 }}
                                     >
-                                      <Trash size={17} color="#ef4444" strokeWidth={2} />
+                                      <Trash size={17} color={colors.fg.muted} strokeWidth={2} />
                                     </TouchableOpacity>
                                   </View>
                                 </TouchableOpacity>
