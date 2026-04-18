@@ -74,9 +74,29 @@ interface PendingPermission {
   callId?: string;
 }
 
-type PartType = "text" | "reasoning" | "tool" | "file-change" | "step-start" | "step-finish";
+interface PendingQuestionRequest {
+  sessionId: string;
+  requestId: number | string;
+  messageId?: string;
+  callId?: string;
+  questionIds: string[];
+}
+
+type PartType = "text" | "reasoning" | "plan" | "tool" | "file-change" | "step-start" | "step-finish";
 
 const THREAD_LIST_SOURCE_KINDS = ["cli", "vscode", "appServer", "exec", "unknown"];
+const CODEX_AGENTS = [
+  {
+    name: "Build",
+    mode: "default",
+    description: "Default Codex collaboration mode.",
+  },
+  {
+    name: "plan",
+    mode: "plan",
+    description: "Plan-first Codex collaboration mode.",
+  },
+] as const;
 const DEBUG_MODE = process.env.LUNEL_DEBUG === "1" || process.env.LUNEL_DEBUG_AI === "1";
 
 function joinStreamingText(previousText: string, nextChunk: string): string {
@@ -115,6 +135,7 @@ export class CodexProvider implements AIProvider {
   private deletedThreadIds = new Set<string>();
   private resumedThreadIds = new Set<string>();
   private pendingPermissionRequestIds = new Map<string, PendingPermission>();
+  private pendingQuestionRequestIds = new Map<string, PendingQuestionRequest>();
   private assistantMessageIdByTurnId = new Map<string, string>();
   private partTextById = new Map<string, string>();
 
@@ -147,7 +168,12 @@ export class CodexProvider implements AIProvider {
       }
     });
 
-    await this.call("initialize", { clientInfo: { name: "lunel", version: "1.0" } });
+    await this.call("initialize", {
+      clientInfo: { name: "lunel", version: "1.0" },
+      capabilities: {
+        experimentalApi: true,
+      },
+    });
     await this.refreshConfigDefaults().catch(() => {
       // Config defaults are best-effort metadata only.
     });
@@ -343,32 +369,37 @@ export class CodexProvider implements AIProvider {
 
     (async () => {
       try {
-        await this.ensureThreadResumed(session.id, true, codexOptions);
+        const effortLevels: Array<NonNullable<CodexPromptOptions["reasoningEffort"]>> = ["low", "medium", "high"];
+        const speedDelta: Record<NonNullable<CodexPromptOptions["speed"]>, number> = {
+          fast: -1,
+          balanced: 0,
+          quality: 1,
+        };
+        const baseEffort = codexOptions?.reasoningEffort ?? "medium";
+        const baseIndex = effortLevels.indexOf(baseEffort);
+        const adjustedIndex = Math.max(
+          0,
+          Math.min(
+            effortLevels.length - 1,
+            baseIndex + (codexOptions?.speed ? speedDelta[codexOptions.speed] : 0),
+          ),
+        );
+        const reasoningEffort = effortLevels[adjustedIndex];
+        const modelId = await this.resolveModelId(model);
+        const collaborationMode = this.buildCollaborationMode(agent, modelId, reasoningEffort);
+        // Freshly created sessions already have a live backend thread from
+        // thread/start. Forcing thread/resume here can attach stale state to a
+        // brand-new session and trigger rollout lookup failures on turn/start.
+        await this.ensureThreadResumed(session.id, false, codexOptions, collaborationMode);
         let imageUrlKey: "url" | "image_url" = "url";
         while (true) {
           try {
-            const effortLevels: Array<NonNullable<CodexPromptOptions["reasoningEffort"]>> = ["low", "medium", "high"];
-            const speedDelta: Record<NonNullable<CodexPromptOptions["speed"]>, number> = {
-              fast: -1,
-              balanced: 0,
-              quality: 1,
-            };
-            const baseEffort = codexOptions?.reasoningEffort ?? "medium";
-            const baseIndex = effortLevels.indexOf(baseEffort);
-            const adjustedIndex = Math.max(
-              0,
-              Math.min(
-                effortLevels.length - 1,
-                baseIndex + (codexOptions?.speed ? speedDelta[codexOptions.speed] : 0),
-              ),
-            );
-            const reasoningEffort = effortLevels[adjustedIndex];
             await this.call("turn/start", {
               threadId: session.id,
               input: this.makeTurnInputPayload(text, files, imageUrlKey),
-              ...(model ? { model: model.providerID === "codex" ? model.modelID : `${model.providerID}/${model.modelID}` } : {}),
-              ...(agent ? { agent } : {}),
+              ...(modelId ? { model: modelId } : {}),
               ...(reasoningEffort ? { reasoningEffort } : {}),
+              ...(collaborationMode ? { collaborationMode } : {}),
             });
             break;
           } catch (err) {
@@ -405,7 +436,7 @@ export class CodexProvider implements AIProvider {
   }
 
   async agents(): Promise<{ agents: unknown }> {
-    return { agents: [] };
+    return { agents: [...CODEX_AGENTS] };
   }
 
   async providers(): Promise<ProviderInfo> {
@@ -481,12 +512,64 @@ export class CodexProvider implements AIProvider {
     return {};
   }
 
-  async questionReply(): Promise<Record<string, never>> {
-    throw new Error("Codex structured user input is not supported by Lunel yet");
+  async questionReply(
+    sessionId: string,
+    questionId: string,
+    answers: string[][],
+  ): Promise<Record<string, never>> {
+    const pending = this.pendingQuestionRequestIds.get(questionId);
+    if (!pending) {
+      this.emitter?.({
+        type: "question.replied",
+        properties: { sessionID: sessionId, requestID: questionId, answers, skipped: true },
+      });
+      return {};
+    }
+
+    const responseAnswers: Record<string, { answers: string[] }> = {};
+    pending.questionIds.forEach((id, index) => {
+      responseAnswers[id] = {
+        answers: Array.isArray(answers[index]) ? answers[index].filter((value): value is string => typeof value === "string") : [],
+      };
+    });
+
+    this.send({
+      jsonrpc: "2.0",
+      id: pending.requestId,
+      result: { answers: responseAnswers },
+    });
+    this.pendingQuestionRequestIds.delete(questionId);
+    this.emitter?.({
+      type: "question.replied",
+      properties: { sessionID: sessionId, requestID: questionId, answers },
+    });
+    return {};
   }
 
-  async questionReject(): Promise<Record<string, never>> {
-    throw new Error("Codex structured user input is not supported by Lunel yet");
+  async questionReject(
+    sessionId: string,
+    questionId: string,
+  ): Promise<Record<string, never>> {
+    const pending = this.pendingQuestionRequestIds.get(questionId);
+    if (!pending) {
+      this.emitter?.({
+        type: "question.rejected",
+        properties: { sessionID: sessionId, requestID: questionId, skipped: true },
+      });
+      return {};
+    }
+
+    this.send({
+      jsonrpc: "2.0",
+      id: pending.requestId,
+      result: { answers: {} },
+    });
+    this.pendingQuestionRequestIds.delete(questionId);
+    this.emitter?.({
+      type: "question.rejected",
+      properties: { sessionID: sessionId, requestID: questionId },
+    });
+    return {};
   }
 
   private send(req: JsonRpcOutbound): void {
@@ -547,10 +630,29 @@ export class CodexProvider implements AIProvider {
     const session = this.resolveSessionFromPayload(params);
 
     if (method === "item/tool/requestUserInput") {
-      this.send({
-        jsonrpc: "2.0",
-        id: requestId,
-        error: { code: -32601, message: "Structured user input is not supported by Lunel yet" },
+      const questionRequestId = String(requestId);
+      const callId = this.extractItemId(params) ?? undefined;
+      const messageId = session ? this.ensureAssistantMessage(session, this.extractTurnId(params) ?? `session:${session.id}`) : undefined;
+      const questions = this.extractStructuredUserInputQuestions(params);
+      this.pendingQuestionRequestIds.set(questionRequestId, {
+        sessionId: session?.id ?? "",
+        requestId,
+        messageId,
+        callId,
+        questionIds: questions.map((question) => this.readString(this.asRecord(question).id)).filter((value): value is string => Boolean(value)),
+      });
+
+      this.emitter?.({
+        type: "question.asked",
+        properties: {
+          id: questionRequestId,
+          sessionID: session?.id,
+          questions,
+          tool: {
+            ...(messageId ? { messageID: messageId } : {}),
+            ...(callId ? { callID: callId } : {}),
+          },
+        },
       });
       return;
     }
@@ -736,6 +838,9 @@ export class CodexProvider implements AIProvider {
           this.pendingPermissionRequestIds.delete(permissionId);
           this.emitter?.({ type: "permission.replied", properties: { permissionId } });
         }
+        if (permissionId && this.pendingQuestionRequestIds.has(permissionId)) {
+          this.pendingQuestionRequestIds.delete(permissionId);
+        }
         return;
       }
 
@@ -880,7 +985,7 @@ export class CodexProvider implements AIProvider {
     const itemId = this.extractItemId(params) ?? this.readString(item.id) ?? normalizedType ?? "tool";
     const fileChangeLike = this.isFileChangeStructuredItem(normalizedType, item, params);
     const emittedPartType: PartType = normalizedType === "plan"
-      ? "reasoning"
+      ? "plan"
       : (fileChangeLike ? "file-change" : "tool");
     const partId = `${messageId}:${emittedPartType}:${itemId}`;
     const nextText = this.extractStructuredOutput(params, item, normalizedType);
@@ -906,8 +1011,8 @@ export class CodexProvider implements AIProvider {
       sessionID: session.id,
       messageID: messageId,
       type: emittedPartType,
-      ...(emittedPartType === "reasoning"
-        ? { text: outputValue ?? "Planning..." }
+      ...(emittedPartType === "plan"
+        ? { text: outputValue ?? (emittedPartType === "plan" ? "Planning..." : "") }
         : { name, toolName: name, input, output: outputValue, state, ...(patch ? { patch } : {}) }),
     };
 
@@ -1111,6 +1216,38 @@ export class CodexProvider implements AIProvider {
       } => Boolean(value));
   }
 
+  private async resolveModelId(model?: ModelSelector): Promise<string | undefined> {
+    if (model) {
+      return model.providerID === "codex" ? model.modelID : `${model.providerID}/${model.modelID}`;
+    }
+
+    const items = await this.fetchModels();
+    return items.find((item) => item.isDefault)?.model ?? items[0]?.model;
+  }
+
+  private buildCollaborationMode(
+    agent: string | undefined,
+    modelId: string | undefined,
+    reasoningEffort: NonNullable<CodexPromptOptions["reasoningEffort"]>,
+  ): Record<string, unknown> | undefined {
+    const normalizedAgent = (agent ?? "").trim().toLowerCase();
+    const mode = normalizedAgent === "build" ? "default" : normalizedAgent;
+    if (mode !== "default" && mode !== "plan") {
+      return undefined;
+    }
+    if (!modelId) {
+      return undefined;
+    }
+
+    return {
+      mode,
+      settings: {
+        model: modelId,
+        reasoning_effort: reasoningEffort,
+      },
+    };
+  }
+
   private parseThreadListEntry(value: unknown, archived = false): ThreadListEntry | undefined {
     const obj = this.asRecord(value);
     const id = this.extractThreadId(obj);
@@ -1230,7 +1367,12 @@ export class CodexProvider implements AIProvider {
     return this.upsertSession({ id: sessionId, title: "Conversation", createdAt: Date.now(), updatedAt: Date.now() });
   }
 
-  private async ensureThreadResumed(threadId: string, force = false, codexOptions?: CodexPromptOptions): Promise<void> {
+  private async ensureThreadResumed(
+    threadId: string,
+    force = false,
+    codexOptions?: CodexPromptOptions,
+    collaborationMode?: Record<string, unknown>,
+  ): Promise<void> {
     if (!threadId || this.resumedThreadIds.has(threadId)) {
       if (!force) return;
     }
@@ -1241,8 +1383,13 @@ export class CodexProvider implements AIProvider {
       params.cwd = session.cwd;
     }
     const permissionMode = codexOptions?.permissionMode ?? "default";
-    params.approvalPolicy = permissionMode === "full-access" ? "never" : null;
-    params.sandbox = permissionMode === "full-access" ? "danger-full-access" : null;
+    if (permissionMode === "full-access") {
+      params.approvalPolicy = "never";
+      params.sandbox = "danger-full-access";
+    }
+    if (collaborationMode) {
+      params.collaborationMode = collaborationMode;
+    }
 
     const result = await this.call("thread/resume", params);
     const payload = this.asRecord(result);
@@ -1351,7 +1498,7 @@ export class CodexProvider implements AIProvider {
           messages.push({
             id: itemId,
             role: "assistant",
-            parts: [{ id: `${itemId}:plan`, type: "reasoning", text, sessionID: threadId, messageID: itemId }],
+            parts: [{ id: `${itemId}:plan`, type: "plan", text, sessionID: threadId, messageID: itemId }],
             time: timestamp,
           });
           continue;
@@ -1672,6 +1819,43 @@ export class CodexProvider implements AIProvider {
       ?? this.readRawString(this.asRecord(payload.event).delta)
       ?? this.readRawString(this.asRecord(payload.event).message)
     );
+  }
+
+  private extractStructuredUserInputQuestions(payload: Record<string, unknown>): Array<Record<string, unknown>> {
+    const rawQuestions = this.readArray(payload.questions);
+    const questions: Array<Record<string, unknown>> = [];
+    for (const value of rawQuestions) {
+      const question = this.asRecord(value);
+      const options = this.readArray(question.options)
+        .map((option) => {
+          const optionObject = this.asRecord(option);
+          const label = this.readString(optionObject.label);
+          const description = this.readString(optionObject.description);
+          if (!label) return undefined;
+          return {
+            label,
+            ...(description ? { description } : {}),
+          };
+        })
+        .filter((value): value is { label: string; description?: string } => Boolean(value));
+
+      const id = this.readString(question.id);
+      const header = this.readString(question.header);
+      const prompt = this.readString(question.question);
+      if (!id || !header || !prompt) {
+        continue;
+      }
+
+      questions.push({
+        id,
+        header,
+        question: prompt,
+        ...(options.length > 0 ? { options } : {}),
+        ...(typeof question.isOther === "boolean" ? { isOther: question.isOther } : {}),
+        ...(typeof question.isSecret === "boolean" ? { isSecret: question.isSecret } : {}),
+      });
+    }
+    return questions;
   }
 
   private extractThreadId(payload: unknown): string | undefined {

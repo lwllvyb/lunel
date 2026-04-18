@@ -52,7 +52,7 @@ export interface AIProvider {
 }
 
 export interface AIPart {
-  type: "text" | "tool" | "tool-call" | "tool-result" | "file-change" | "reasoning" | "step-start" | "step-finish" | "file";
+  type: "text" | "tool" | "tool-call" | "tool-result" | "file-change" | "reasoning" | "plan" | "step-start" | "step-finish" | "file";
   text?: string;
   name?: string;
   toolName?: string;
@@ -100,10 +100,13 @@ export interface AIQuestionOption {
 }
 
 export interface AIQuestionInfo {
+  id?: string;
   question: string;
   header: string;
   options: AIQuestionOption[];
   multiple?: boolean;
+  isOther?: boolean;
+  isSecret?: boolean;
 }
 
 export interface AIQuestion {

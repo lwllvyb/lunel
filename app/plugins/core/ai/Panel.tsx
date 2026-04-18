@@ -87,6 +87,10 @@ const DEFAULT_OPENCODE_AGENTS: { id: string; name: string; icon?: React.Componen
   { id: "build", name: "Build", icon: Hammer },
   { id: "plan", name: "Plan", icon: MapIcon },
 ];
+const DEFAULT_CODEX_AGENTS: { id: string; name: string; icon?: React.ComponentType<any> }[] = [
+  { id: "default", name: "Build", icon: Hammer },
+  { id: "plan", name: "Plan", icon: MapIcon },
+];
 
 type ComposerSheet = "configure" | null;
 
@@ -554,6 +558,30 @@ function ReasoningPartView({ part }: { part: AIPart }) {
   );
 }
 
+function PlanPartView({ part }: { part: AIPart }) {
+  const { colors, fonts, radius } = useTheme();
+  const text = ((part.text as string) || "").trim();
+  if (!text) return null;
+
+  return (
+    <View style={styles.reasoningContainer}>
+      <View style={[styles.commandGroupHeader, styles.reasoningHeader, { backgroundColor: colors.bg.raised }]}>
+        <View style={[styles.commandGroupHeaderLeft, styles.reasoningHeaderLeft]}>
+          <View style={[styles.commandGroupIconFrame, { borderColor: `${colors.fg.subtle}4D` }]}>
+            <MapIcon size={15} color={colors.fg.muted} />
+          </View>
+          <Text style={{ color: colors.fg.muted, fontSize: typography.subHeading, fontFamily: fonts.sans.regular, flex: 1 }}>
+            Plan
+          </Text>
+        </View>
+      </View>
+      <View style={[styles.reasoningBody, { borderColor: colors.bg.raised, backgroundColor: colors.bg.raised, borderRadius: radius.md }]}>
+        <Markdown compact>{text}</Markdown>
+      </View>
+    </View>
+  );
+}
+
 function StepStartView({ part }: { part: AIPart }) {
   const { colors, fonts } = useTheme();
   const title = (part.title as string) || "";
@@ -729,6 +757,7 @@ function SnakeDotsLoader({
 
 function deriveActivityLabelFromPart(part: AIPart): string | null {
   if (part.type === "reasoning") return "Thinking...";
+  if (part.type === "plan") return "Planning...";
   if (part.type !== "tool" && part.type !== "tool-call" && part.type !== "tool-result") return null;
 
   const inputRaw = typeof part.input === "string"
@@ -928,6 +957,10 @@ function isHiddenMetaPart(part: AIPart): boolean {
     const text = ((part.text as string) || (typeof part.reasoning === "string" ? part.reasoning : "")).trim();
     if (!text) return true;
     return isHiddenAssistantMetaText(text);
+  }
+  if (part.type === "plan") {
+    const text = ((part.text as string) || "").trim();
+    return !text;
   }
   return false;
 }
@@ -1441,6 +1474,8 @@ function MessagePartView({
       );
     case "reasoning":
       return <ReasoningPartView part={part} />;
+    case "plan":
+      return <PlanPartView part={part} />;
     case "step-start":
       return null;
     case "step-finish":
@@ -1613,21 +1648,55 @@ function QuestionDialog({ questionRequest, colors, radius, fonts, onSubmit, onRe
   onSubmit: (answers: string[][]) => void;
   onReject: () => void;
 }) {
-  const firstQuestion = questionRequest.questions[0];
-  const options = Array.isArray(firstQuestion?.options) ? firstQuestion.options : [];
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(options.length > 0 ? 0 : null);
-  const [freeform, setFreeform] = useState("");
+  const questions = Array.isArray(questionRequest.questions) ? questionRequest.questions : [];
+  const [selectedIndices, setSelectedIndices] = useState<Record<number, number | null>>(() =>
+    Object.fromEntries(questions.map((question, index) => [index, Array.isArray(question?.options) && question.options.length > 0 ? 0 : null]))
+  );
+  const [freeformAnswers, setFreeformAnswers] = useState<Record<number, string>>({});
 
   const handleSubmit = () => {
-    if (options.length > 0 && selectedIndex != null && options[selectedIndex]?.label) {
-      onSubmit([[options[selectedIndex].label]]);
-      return;
-    }
-    const trimmed = freeform.trim();
-    if (trimmed.length > 0) {
-      onSubmit([[trimmed]]);
+    const answers = questions.map((question, index) => {
+      const baseOptions = Array.isArray(question?.options) ? question.options : [];
+      const options = question?.isOther
+        ? [...baseOptions, { label: "__other__", description: "Enter a custom answer." }]
+        : baseOptions;
+      const selectedIndex = selectedIndices[index];
+      const selectedLabel = selectedIndex != null ? options[selectedIndex]?.label : undefined;
+      const typedValue = (freeformAnswers[index] || "").trim();
+
+      if (selectedLabel === "__other__") {
+        return typedValue ? [typedValue] : [];
+      }
+
+      if (selectedLabel) {
+        return [selectedLabel];
+      }
+
+      return typedValue ? [typedValue] : [];
+    });
+
+    if (answers.every((entry) => entry.length > 0)) {
+      onSubmit(answers);
     }
   };
+
+  const canSubmit = questions.length > 0 && questions.every((question, index) => {
+    const baseOptions = Array.isArray(question?.options) ? question.options : [];
+    const options = question?.isOther
+      ? [...baseOptions, { label: "__other__", description: "Enter a custom answer." }]
+      : baseOptions;
+    const selectedIndex = selectedIndices[index];
+    const selectedLabel = selectedIndex != null ? options[selectedIndex]?.label : undefined;
+    const typedValue = (freeformAnswers[index] || "").trim();
+
+    if (selectedLabel === "__other__") {
+      return typedValue.length > 0;
+    }
+    if (selectedLabel) {
+      return true;
+    }
+    return typedValue.length > 0;
+  });
 
   return (
     <Modal transparent animationType="fade">
@@ -1637,61 +1706,79 @@ function QuestionDialog({ questionRequest, colors, radius, fonts, onSubmit, onRe
             <Sparkles size={20} color={colors.accent.default} strokeWidth={2} />
             <Text style={{ color: colors.fg.default, fontSize: 15, fontFamily: fonts.sans.semibold }}>Input Needed</Text>
           </View>
-          <Text style={{ color: colors.fg.default, fontSize: 14, fontFamily: fonts.sans.semibold, marginBottom: 6 }}>
-            {firstQuestion?.header || "Question"}
-          </Text>
-          <Text style={{ color: colors.fg.muted, fontSize: 13, fontFamily: fonts.sans.regular, marginBottom: 14 }}>
-            {firstQuestion?.question || "The agent needs your input to continue."}
-          </Text>
-          {options.length > 0 ? (
-            <View style={{ gap: 8, marginBottom: 16 }}>
-              {options.map((option, index) => {
-                const active = selectedIndex === index;
-                return (
-                  <TouchableOpacity
-                    key={`${option.label}:${index}`}
-                    onPress={() => setSelectedIndex(index)}
-                    style={{
-                      borderWidth: 1,
-                      borderColor: active ? colors.accent.default : colors.bg.raised,
-                      backgroundColor: active ? colors.bg.raised : colors.bg.raised,
-                      borderRadius: radius.md,
-                      paddingHorizontal: 12,
-                      paddingVertical: 10,
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={{ color: colors.fg.default, fontSize: 13, fontFamily: fonts.sans.semibold }}>
-                      {option.label}
-                    </Text>
-                    {!!option.description && (
-                      <Text style={{ color: colors.fg.muted, fontSize: 12, fontFamily: fonts.sans.regular, marginTop: 4 }}>
-                        {option.description}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          ) : (
-            <TextInput
-              value={freeform}
-              onChangeText={setFreeform}
-              placeholder="Type your answer"
-              placeholderTextColor={colors.fg.muted}
-              multiline
-              style={{
-                color: colors.fg.default,
-                backgroundColor: colors.bg.raised,
-                borderRadius: radius.md,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                minHeight: 96,
-                textAlignVertical: "top",
-                marginBottom: 16,
-              }}
-            />
-          )}
+          <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 16, paddingBottom: 8 }}>
+            {questions.map((question, questionIndex) => {
+              const baseOptions = Array.isArray(question?.options) ? question.options : [];
+              const options = question?.isOther
+                ? [...baseOptions, { label: "__other__", description: "Enter a custom answer." }]
+                : baseOptions;
+              const selectedIndex = selectedIndices[questionIndex];
+              const selectedLabel = selectedIndex != null ? options[selectedIndex]?.label : undefined;
+              const shouldShowFreeform = options.length === 0 || selectedLabel === "__other__";
+
+              return (
+                <View key={question.id || `${question.header}:${questionIndex}`}>
+                  <Text style={{ color: colors.fg.default, fontSize: 14, fontFamily: fonts.sans.semibold, marginBottom: 6 }}>
+                    {question?.header || `Question ${questionIndex + 1}`}
+                  </Text>
+                  <Text style={{ color: colors.fg.muted, fontSize: 13, fontFamily: fonts.sans.regular, marginBottom: 14 }}>
+                    {question?.question || "The agent needs your input to continue."}
+                  </Text>
+                  {options.length > 0 ? (
+                    <View style={{ gap: 8, marginBottom: shouldShowFreeform ? 12 : 0 }}>
+                      {options.map((option, optionIndex) => {
+                        const active = selectedIndex === optionIndex;
+                        const label = option.label === "__other__" ? "Other" : option.label;
+                        return (
+                          <TouchableOpacity
+                            key={`${label}:${optionIndex}`}
+                            onPress={() => setSelectedIndices((prev) => ({ ...prev, [questionIndex]: optionIndex }))}
+                            style={{
+                              borderWidth: 1,
+                              borderColor: active ? colors.accent.default : colors.bg.raised,
+                              backgroundColor: colors.bg.raised,
+                              borderRadius: radius.md,
+                              paddingHorizontal: 12,
+                              paddingVertical: 10,
+                            }}
+                            activeOpacity={0.7}
+                          >
+                            <Text style={{ color: colors.fg.default, fontSize: 13, fontFamily: fonts.sans.semibold }}>
+                              {label}
+                            </Text>
+                            {!!option.description && (
+                              <Text style={{ color: colors.fg.muted, fontSize: 12, fontFamily: fonts.sans.regular, marginTop: 4 }}>
+                                {option.description}
+                              </Text>
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  ) : null}
+                  {shouldShowFreeform ? (
+                    <TextInput
+                      value={freeformAnswers[questionIndex] || ""}
+                      onChangeText={(value) => setFreeformAnswers((prev) => ({ ...prev, [questionIndex]: value }))}
+                      placeholder="Type your answer"
+                      placeholderTextColor={colors.fg.muted}
+                      multiline={!question?.isSecret}
+                      secureTextEntry={!!question?.isSecret}
+                      style={{
+                        color: colors.fg.default,
+                        backgroundColor: colors.bg.raised,
+                        borderRadius: radius.md,
+                        paddingHorizontal: 12,
+                        paddingVertical: 10,
+                        minHeight: question?.isSecret ? undefined : 96,
+                        textAlignVertical: question?.isSecret ? "center" : "top",
+                      }}
+                    />
+                  ) : null}
+                </View>
+              );
+            })}
+          </ScrollView>
           <View style={{ flexDirection: "row", gap: 8, justifyContent: "flex-end" }}>
             <TouchableOpacity
               onPress={onReject}
@@ -1702,9 +1789,9 @@ function QuestionDialog({ questionRequest, colors, radius, fonts, onSubmit, onRe
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleSubmit}
-              style={[styles.permissionBtn, { backgroundColor: colors.accent.default, borderRadius: radius.sm, opacity: options.length > 0 || freeform.trim().length > 0 ? 1 : 0.5 }]}
+              style={[styles.permissionBtn, { backgroundColor: colors.accent.default, borderRadius: radius.sm, opacity: canSubmit ? 1 : 0.5 }]}
               activeOpacity={0.7}
-              disabled={options.length === 0 && freeform.trim().length === 0}
+              disabled={!canSubmit}
             >
               <Text style={{ color: '#ffffff', fontSize: 13, fontFamily: fonts.sans.semibold }}>Submit</Text>
             </TouchableOpacity>
@@ -1974,7 +2061,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
   // Config state
   const [agentsByBackend, setAgentsByBackend] = useState<Record<AiBackend, { id: string; name: string; icon?: React.ComponentType<any> }[]>>({
     opencode: DEFAULT_OPENCODE_AGENTS,
-    codex: [],
+    codex: DEFAULT_CODEX_AGENTS,
   });
   const [modelOptionsByBackend, setModelOptionsByBackend] = useState<Record<AiBackend, { id: string; name: string }[]>>({
     opencode: [],
@@ -1982,7 +2069,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
   });
   const [selectedAgentByBackend, setSelectedAgentByBackend] = useState<Record<AiBackend, string>>({
     opencode: "build",
-    codex: "",
+    codex: "default",
   });
   const [selectedModelByBackend, setSelectedModelByBackend] = useState<Record<AiBackend, string>>({
     opencode: "",
@@ -2397,6 +2484,11 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
         case "question.asked": {
           const sessId = (props.sessionID as string) || (props.sessionId as string);
           if (sessId) {
+            setStreamingBySession((prev) => (
+              prev[sessId]
+                ? prev
+                : { ...prev, [sessId]: true }
+            ));
             setSessionActivityLabels((prev) => ({ ...prev, [sessId]: "Waiting for input..." }));
           }
           setPendingQuestion(props as unknown as AIQuestion);
@@ -2404,6 +2496,15 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
         }
         case "question.replied":
         case "question.rejected": {
+          const sessId = (props.sessionID as string) || (props.sessionId as string);
+          if (sessId) {
+            setStreamingBySession((prev) => (
+              prev[sessId]
+                ? prev
+                : { ...prev, [sessId]: true }
+            ));
+            setSessionActivityLabels((prev) => ({ ...prev, [sessId]: "Working..." }));
+          }
           setPendingQuestion(null);
           break;
         }
@@ -2453,25 +2554,26 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
                 : (agentsList as AIAgent[]);
               const mapped = filteredAgents.map((a) => {
                 const raw = a.name || a.mode;
+                const id = (a.mode || a.name || "").trim().toLowerCase();
                 return {
-                  id: raw,
+                  id: id || raw,
                   name: raw.charAt(0).toUpperCase() + raw.slice(1),
                   icon: a.mode === "plan" ? MapIcon : Hammer,
                 };
               });
-              const resolvedAgents = backend === "opencode" && mapped.length === 0
-                ? DEFAULT_OPENCODE_AGENTS
+              const resolvedAgents = mapped.length === 0
+                ? (backend === "codex" ? DEFAULT_CODEX_AGENTS : DEFAULT_OPENCODE_AGENTS)
                 : mapped;
               setAgentsByBackend((prev) => ({ ...prev, [backend]: resolvedAgents }));
               setSelectedAgentByBackend((prev) => ({ ...prev, [backend]: resolvedAgents[0]?.id || "" }));
             } else if (backend === "codex") {
-              setAgentsByBackend((prev) => ({ ...prev, codex: [] }));
-              setSelectedAgentByBackend((prev) => ({ ...prev, codex: "" }));
+              setAgentsByBackend((prev) => ({ ...prev, codex: DEFAULT_CODEX_AGENTS }));
+              setSelectedAgentByBackend((prev) => ({ ...prev, codex: "default" }));
             }
           } catch {
             if (backend === "codex") {
-              setAgentsByBackend((prev) => ({ ...prev, codex: [] }));
-              setSelectedAgentByBackend((prev) => ({ ...prev, codex: "" }));
+              setAgentsByBackend((prev) => ({ ...prev, codex: DEFAULT_CODEX_AGENTS }));
+              setSelectedAgentByBackend((prev) => ({ ...prev, codex: "default" }));
             }
           }
 
@@ -3149,7 +3251,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
     // Resolve backend + transient draft context
     const activeTab = tabs.find((t) => t.id === activeTabId);
     const messageBackend: "opencode" | "codex" = activeTab?.backend ?? pendingBackend ?? "opencode";
-    const selectedAgentForBackend = messageBackend === "opencode" ? selectedAgent : undefined;
+    const selectedAgentForBackend = selectedAgent || undefined;
     let sessId = activeSessionId;
     let localDraftTabId: string | null = activeTab && !activeTab.sessionId ? activeTab.id : null;
     if (!sessId && !localDraftTabId) {
@@ -4127,7 +4229,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
                       <Plus size={18} color={colors.fg.default} strokeWidth={2.4} style={{ opacity: 0.9 }} />
                     </TouchableOpacity>
 
-                    {activeBackend === "opencode" && agents.length > 0 && (
+                    {agents.length > 0 && (
                       <View
                         onLayout={(e) => {
                           const { x, width } = e.nativeEvent.layout;
