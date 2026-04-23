@@ -19,6 +19,7 @@ import {
 import * as FileSystem from 'expo-file-system/legacy';
 import * as DocumentPicker from 'expo-document-picker';
 import { FlashList } from '@shopify/flash-list';
+import { SvgUri } from 'react-native-svg';
 import {
   CloudOff,
   X,
@@ -52,6 +53,7 @@ import { useApi, FileEntry, ApiError } from '@/hooks/useApi';
 import { gPI, innerApi } from '@/plugins';
 import { usePlugins } from '@/plugins/context';
 import { PluginPanelProps } from '../../types';
+import { resolveMaterialIconUri } from './materialIconTheme';
 
 type SortOption = 'name' | 'size' | 'modified';
 type FilterOption = 'all' | 'files' | 'folders';
@@ -105,6 +107,36 @@ interface FileActionSheetProps {
   radius: any;
 }
 
+const EntryIcon = memo(function EntryIcon({
+  item,
+  colors,
+}: {
+  item: FileEntry;
+  colors: any;
+}) {
+  const iconUri = resolveMaterialIconUri(item);
+  const [iconLoadFailed, setIconLoadFailed] = useState(false);
+
+  useEffect(() => {
+    setIconLoadFailed(false);
+  }, [iconUri]);
+
+  if (!iconUri || iconLoadFailed) {
+    return item.type === 'directory'
+      ? <Folder size={18} color={colors.accent.default} />
+      : <File size={18} color={colors.fg.muted} />;
+  }
+
+  return (
+    <SvgUri
+      width={20}
+      height={20}
+      uri={iconUri}
+      onError={() => setIconLoadFailed(true)}
+    />
+  );
+});
+
 const FileItem = memo(function FileItem({ item, isFirst, onPress, colors, fonts, spacing, radius }: FileItemProps) {
   return (
     <TouchableOpacity
@@ -126,15 +158,12 @@ const FileItem = memo(function FileItem({ item, isFirst, onPress, colors, fonts,
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-        {item.type === 'directory'
-          ? <Folder size={18} color={colors.accent.default} />
-          : <File size={18} color={colors.fg.muted} />
-        }
+        <EntryIcon item={item} colors={colors} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={{
           fontSize: typography.body,
-          fontFamily: fonts.sans.medium,
+          fontFamily: fonts.sans.regular,
           color: colors.fg.default,
         }} numberOfLines={1}>
           {item.name}
