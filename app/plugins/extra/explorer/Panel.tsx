@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, memo } from 'react';
 import InfoSheet from '@/components/InfoSheet';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
 import {
   ScrollView,
   Text,
@@ -8,7 +7,6 @@ import {
   TouchableOpacity,
   View,
   Modal,
-  Pressable,
   ActivityIndicator,
   Alert,
   BackHandler,
@@ -199,29 +197,6 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
   const [selectedItem, setSelectedItem] = useState<FileEntry | null>(null);
   const [selectedItemIsBinary, setSelectedItemIsBinary] = useState<boolean | null>(null);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
-  const [filtersModalVisible, setFiltersModalVisible] = useState(false);
-  const filtersBackdropOpacity = useSharedValue(0);
-  const filtersSheetTranslateY = useSharedValue(1000);
-
-  const hideFiltersModal = useCallback(() => setFiltersModalVisible(false), []);
-
-  useEffect(() => {
-    if (showFiltersModal) {
-      setFiltersModalVisible(true);
-      filtersBackdropOpacity.value = 0;
-      filtersSheetTranslateY.value = 1000;
-      filtersBackdropOpacity.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.cubic) });
-      filtersSheetTranslateY.value = withTiming(0, { duration: 260, easing: Easing.out(Easing.cubic) });
-    } else {
-      filtersBackdropOpacity.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.cubic) });
-      filtersSheetTranslateY.value = withTiming(1000, { duration: 240, easing: Easing.out(Easing.cubic) }, (finished) => {
-        if (finished) runOnJS(hideFiltersModal)();
-      });
-    }
-  }, [showFiltersModal]);
-
-  const filtersBackdropStyle = useAnimatedStyle(() => ({ opacity: filtersBackdropOpacity.value }));
-  const filtersSheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: filtersSheetTranslateY.value }] }));
   const [uploading, setUploading] = useState(false);
   const [uploadStatusText, setUploadStatusText] = useState('');
   const [uploadStage, setUploadStage] = useState<'idle' | 'preparing' | 'writing'>('idle');
@@ -1054,153 +1029,101 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
       </Modal>
 
 
-      {/* Filters Modal */}
-      <Modal
-        visible={filtersModalVisible}
-        transparent
-        animationType="none"
-        onRequestClose={() => setShowFiltersModal(false)}
+      {/* Filters Sheet */}
+      <InfoSheet
+        visible={showFiltersModal}
+        onClose={() => setShowFiltersModal(false)}
+        title="Sort & Filter"
+        description="Adjust how files are sorted and shown"
       >
-        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-          <Animated.View
-            style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)' }, filtersBackdropStyle]}
-            pointerEvents="box-none"
-          >
-            <Pressable style={{ flex: 1 }} onPress={() => setShowFiltersModal(false)} />
-          </Animated.View>
-          <Animated.View style={[{ marginHorizontal: spacing[4], marginBottom: spacing[4] }, filtersSheetStyle]}>
-          <View style={{
-            backgroundColor: colors.bg.raised,
-            borderRadius: radius["2xl"],
-            borderWidth: 0.5,
-            borderColor: colors.border.default,
-            overflow: 'hidden',
-            paddingBottom: spacing[6],
-            paddingHorizontal: spacing[4],
-          }}>
-            {/* Modal Header */}
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              paddingVertical: spacing[4],
+        <ScrollView contentContainerStyle={{ gap: spacing[4], paddingBottom: spacing[2] }}>
+          <View>
+            <Text style={{
+              fontSize: typography.caption,
+              fontFamily: fonts.sans.semibold,
+              color: 'rgba(255,255,255,0.4)',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+              marginBottom: spacing[2],
             }}>
-              <Text style={{
-                fontSize: 17,
-                fontFamily: fonts.sans.semibold,
-                color: colors.fg.default,
-              }}>
-                Sort & Filter
-              </Text>
-              <TouchableOpacity
-                onPress={() => setShowFiltersModal(false)}
-                style={{
-                  width: 32,
-                  height: 32,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: radius.full,
-                  backgroundColor: colors.bg.base,
-                  borderWidth: 0.5,
-                  borderColor: colors.border.secondary,
-                }}
-              >
-                <X size={18} color={colors.fg.muted} />
-              </TouchableOpacity>
+              Sort by
+            </Text>
+            <View style={{ gap: spacing[1] }}>
+              {(['name', 'size', 'modified'] as SortOption[]).map(option => (
+                <TouchableOpacity
+                  key={option}
+                  onPress={() => setSortBy(option)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: spacing[3],
+                    paddingVertical: spacing[3],
+                    paddingHorizontal: spacing[3],
+                    borderRadius: radius.lg,
+                    backgroundColor: sortBy === option ? colors.accent.default + '20' : 'rgba(255,255,255,0.06)',
+                  }}
+                >
+                  <Circle
+                    size={18}
+                    color={sortBy === option ? colors.accent.default : 'rgba(255,255,255,0.3)'}
+                    fill={sortBy === option ? colors.accent.default : 'transparent'}
+                  />
+                  <Text style={{
+                    fontSize: typography.body,
+                    fontFamily: sortBy === option ? fonts.sans.semibold : fonts.sans.regular,
+                    color: sortBy === option ? colors.accent.default : '#ffffff',
+                  }}>
+                    {getSortLabel(option)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
-
-            {/* Sort Options */}
-            <View style={{ paddingVertical: spacing[4] }}>
-              <Text style={{
-                fontSize: 12,
-                fontFamily: fonts.sans.semibold,
-                color: colors.fg.muted,
-                textTransform: 'uppercase',
-                letterSpacing: 0.5,
-                marginBottom: spacing[2],
-              }}>
-                Sort by
-              </Text>
-              <View style={{ gap: spacing[1] }}>
-                {(['name', 'size', 'modified'] as SortOption[]).map(option => (
-                  <TouchableOpacity
-                    key={option}
-                    onPress={() => setSortBy(option)}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: spacing[3],
-                      paddingVertical: spacing[4],
-                      paddingHorizontal: spacing[3],
-                      borderRadius: radius.lg,
-                      backgroundColor: sortBy === option ? colors.accent.default + '20' : 'transparent',
-                    }}
-                  >
-                    <Circle
-                      size={20}
-                      color={sortBy === option ? colors.accent.default : colors.fg.muted}
-                      fill={sortBy === option ? colors.accent.default : 'transparent'}
-                    />
-                    <Text style={{
-                      fontSize: 15,
-                      fontFamily: sortBy === option ? fonts.sans.semibold : fonts.sans.regular,
-                      color: sortBy === option ? colors.accent.default : colors.fg.default,
-                    }}>
-                      {getSortLabel(option)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Filter Options */}
-            <View style={{ paddingBottom: spacing[4] }}>
-              <Text style={{
-                fontSize: 12,
-                fontFamily: fonts.sans.semibold,
-                color: colors.fg.muted,
-                textTransform: 'uppercase',
-                letterSpacing: 0.5,
-                marginBottom: spacing[2],
-              }}>
-                Show
-              </Text>
-              <View style={{ gap: spacing[1] }}>
-                {(['all', 'files', 'folders'] as FilterOption[]).map(option => (
-                  <TouchableOpacity
-                    key={option}
-                    onPress={() => setFilterBy(option)}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: spacing[3],
-                      paddingVertical: spacing[4],
-                      paddingHorizontal: spacing[3],
-                      borderRadius: radius.lg,
-                      backgroundColor: filterBy === option ? colors.accent.default + '20' : 'transparent',
-                    }}
-                  >
-                    <Circle
-                      size={20}
-                      color={filterBy === option ? colors.accent.default : colors.fg.muted}
-                      fill={filterBy === option ? colors.accent.default : 'transparent'}
-                    />
-                    <Text style={{
-                      fontSize: 15,
-                      fontFamily: filterBy === option ? fonts.sans.semibold : fonts.sans.regular,
-                      color: filterBy === option ? colors.accent.default : colors.fg.default,
-                    }}>
-                      {getFilterLabel(option)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
           </View>
-          </Animated.View>
-        </View>
-      </Modal>
+
+          <View>
+            <Text style={{
+              fontSize: typography.caption,
+              fontFamily: fonts.sans.semibold,
+              color: 'rgba(255,255,255,0.4)',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+              marginBottom: spacing[2],
+            }}>
+              Show
+            </Text>
+            <View style={{ gap: spacing[1] }}>
+              {(['all', 'files', 'folders'] as FilterOption[]).map(option => (
+                <TouchableOpacity
+                  key={option}
+                  onPress={() => setFilterBy(option)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: spacing[3],
+                    paddingVertical: spacing[3],
+                    paddingHorizontal: spacing[3],
+                    borderRadius: radius.lg,
+                    backgroundColor: filterBy === option ? colors.accent.default + '20' : 'rgba(255,255,255,0.06)',
+                  }}
+                >
+                  <Circle
+                    size={18}
+                    color={filterBy === option ? colors.accent.default : 'rgba(255,255,255,0.3)'}
+                    fill={filterBy === option ? colors.accent.default : 'transparent'}
+                  />
+                  <Text style={{
+                    fontSize: typography.body,
+                    fontFamily: filterBy === option ? fonts.sans.semibold : fonts.sans.regular,
+                    color: filterBy === option ? colors.accent.default : '#ffffff',
+                  }}>
+                    {getFilterLabel(option)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </ScrollView>
+      </InfoSheet>
     </View>
   );
 }

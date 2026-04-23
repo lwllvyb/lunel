@@ -117,7 +117,7 @@ export default function InfoSheet({ visible, onClose, title, description, icon, 
                       ) : null}
                       <View style={{ flex: 1 }}>
                         <Text style={[sheetStyles.title, { fontFamily: fonts.sans.semibold }]} numberOfLines={1}>{title}</Text>
-                        <Text style={[sheetStyles.subtitle, { fontFamily: fonts.mono.regular }]} numberOfLines={1}>{description}</Text>
+                        <Text style={[sheetStyles.subtitle, { fontFamily: fonts.sans.regular }]} numberOfLines={1}>{description}</Text>
                       </View>
                       <TouchableOpacity
                         onPress={() => {
