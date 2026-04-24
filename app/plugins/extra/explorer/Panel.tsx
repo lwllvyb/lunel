@@ -351,11 +351,25 @@ const FileItem = memo(function FileItem({
         : `${directoryItemCount} item${directoryItemCount === 1 ? '' : 's'}`
       : formatFileSize(item.size));
   const shouldShowChevron = showChevron ?? (item.type === 'directory' && !item.__navParent);
+  const longPressTriggeredRef = useRef(false);
+
+  const handleLongPress = () => {
+    longPressTriggeredRef.current = true;
+    onLongPress?.();
+  };
+
+  const handlePress = () => {
+    if (longPressTriggeredRef.current) {
+      longPressTriggeredRef.current = false;
+      return;
+    }
+    onPress();
+  };
 
   return (
     <TouchableOpacity
-      onPress={onPress}
-      onLongPress={onLongPress}
+      onPress={handlePress}
+      onLongPress={handleLongPress}
       activeOpacity={0.7}
       style={{
         flexDirection: 'row',
@@ -466,7 +480,6 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
   const repoFileSearchRequestIdRef = useRef(0);
   const directoryCountRequestIdRef = useRef(0);
   const lastLocalSearchPathRef = useRef(currentPath);
-  const suppressNextPressRef = useRef(false);
   const MAX_UPLOAD_SIZE_BYTES = 15 * 1024 * 1024;
 
   const openWithSystem = async (item: FileEntry, pathOverride?: string) => {
@@ -851,11 +864,6 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
   }, [isActive, currentPath, navigateUp]);
 
   const openItem = (item: ExplorerListItem) => {
-    if (suppressNextPressRef.current) {
-      suppressNextPressRef.current = false;
-      return;
-    }
-
     if (item.__navParent) {
       navigateUp();
       return;
@@ -874,7 +882,6 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
 
   const openItemActions = useCallback((item: ExplorerListItem) => {
     if (item.__navParent) return;
-    suppressNextPressRef.current = true;
     setSelectedItem(item);
     setSelectedItemPathOverride(null);
     setSelectedItemIsBinary(null);
