@@ -61,10 +61,11 @@ import Fontisto from "@expo/vector-icons/Fontisto";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Foundation from "@expo/vector-icons/Foundation";
 import { Audio } from "expo-av";
-import Svg, { Path } from "react-native-svg";
+import Svg, { Path, SvgUri } from "react-native-svg";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MenuView } from "@react-native-menu/menu";
 import { useDrawerStatus } from "@react-navigation/drawer";
+import { resolveMaterialIconUri } from "@/plugins/extra/explorer/materialIconTheme";
 import { innerApi } from "../../innerApi";
 import { PluginPanelProps } from "../../types";
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -141,6 +142,34 @@ function getDropdownHorizontalPosition(
     return { left: 0 };
   }
   return { right: 0 };
+}
+
+function MentionFileIcon({
+  fileName,
+  colors,
+}: {
+  fileName: string;
+  colors: any;
+}) {
+  const [iconLoadFailed, setIconLoadFailed] = useState(false);
+  const iconUri = resolveMaterialIconUri({ name: fileName, type: "file" });
+
+  useEffect(() => {
+    setIconLoadFailed(false);
+  }, [iconUri]);
+
+  if (!iconUri || iconLoadFailed) {
+    return <File size={14} color={colors.fg.subtle} />;
+  }
+
+  return (
+    <SvgUri
+      width={16}
+      height={16}
+      uri={iconUri}
+      onError={() => setIconLoadFailed(true)}
+    />
+  );
 }
 
 function AISkeleton({ colors, paddingTop = 0 }: { colors: any; paddingTop?: number }) {
@@ -4247,7 +4276,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
                               backgroundColor: colors.bg.elevated + "60",
                             }}
                           >
-                            <File size={14} color={colors.fg.subtle} />
+                            <MentionFileIcon fileName={fileName} colors={colors} />
                             <Text style={{ flex: 1, fontFamily: fonts.sans.regular, fontSize: 13 }} numberOfLines={1}>
                               <Text style={{ color: colors.fg.default }}>{fileName}</Text>
                               {dir ? <Text style={{ color: colors.fg.subtle, fontSize: typography.caption }}>{`  •  ${dir}`}</Text> : null}
