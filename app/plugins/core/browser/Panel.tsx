@@ -247,11 +247,17 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
   const activeInfoSnapshot = infoSnapshotByTab[activeTabId] || null;
   const activeElementsInspecting = !!elementsInspectingByTab[activeTabId];
   const activeElementsFocus = elementsFocusByTab[activeTabId] || null;
+  const devsoleMinHeight = 280;
+  const devsoleTopGap = 48;
+  const devsoleCollapsedRatio = 0.58;
   const fallbackViewportHeight = Math.max(0, windowHeight);
   const availableDevsoleHeight = browserViewportHeight || fallbackViewportHeight;
-  const maxDevsoleHeight = Math.max(280, availableDevsoleHeight - 70);
+  const maxDevsoleHeight = Math.max(devsoleMinHeight, availableDevsoleHeight - devsoleTopGap);
   const fullDevsoleHeight = maxDevsoleHeight;
-  const collapsedDevsoleHeight = Math.max(280, Math.round(fullDevsoleHeight * 0.5));
+  const collapsedDevsoleHeight = Math.max(
+    devsoleMinHeight,
+    Math.round(fullDevsoleHeight * devsoleCollapsedRatio)
+  );
   const expandedDevsoleHeight = fullDevsoleHeight;
   const devsoleHeight = useSharedValue(collapsedDevsoleHeight);
 
@@ -2516,7 +2522,7 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
                 right: 0,
                 bottom: 0,
                 zIndex: 20,
-                minHeight: 280,
+                minHeight: devsoleMinHeight,
                 backgroundColor: colors.bg.base,
                 borderTopWidth: 1,
                 borderColor: colors.border.secondary,

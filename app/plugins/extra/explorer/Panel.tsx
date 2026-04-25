@@ -346,10 +346,9 @@ const FileItem = memo(function FileItem({
   const secondaryText = secondaryTextOverride ?? (item.__navParent
     ? 'Back'
     : item.type === 'directory'
-      ? directoryItemCount == null
-        ? '...'
-        : `${directoryItemCount} item${directoryItemCount === 1 ? '' : 's'}`
+      ? ''
       : formatFileSize(item.size));
+  const showSecondaryLine = secondaryText.trim().length > 0;
   const shouldShowChevron = showChevron ?? (item.type === 'directory' && !item.__navParent);
   const longPressTriggeredRef = useRef(false);
 
@@ -386,7 +385,7 @@ const FileItem = memo(function FileItem({
       }}>
         <EntryIcon item={item} colors={colors} />
       </View>
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, justifyContent: showSecondaryLine ? 'flex-start' : 'center' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
           <Text style={{
             fontSize: typography.body,
@@ -408,15 +407,17 @@ const FileItem = memo(function FileItem({
             </Text>
           ) : null}
         </View>
-        <Text style={{
-          fontSize: typography.caption,
-          fontFamily: fonts.sans.regular,
-          color: colors.fg.muted,
-          marginTop: 1,
-        }}>
-          {secondaryText}
-          {item.mtime && ` · ${formatTime(item.mtime)}`}
-        </Text>
+        {showSecondaryLine ? (
+          <Text style={{
+            fontSize: typography.caption,
+            fontFamily: fonts.sans.regular,
+            color: colors.fg.muted,
+            marginTop: 1,
+          }}>
+            {secondaryText}
+            {item.mtime && ` · ${formatTime(item.mtime)}`}
+          </Text>
+        ) : null}
       </View>
       {shouldShowChevron ? (
         <ChevronRight size={18} color={colors.fg.subtle} />
