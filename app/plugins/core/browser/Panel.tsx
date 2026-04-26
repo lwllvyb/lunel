@@ -222,7 +222,7 @@ const DEVSOLE_STUBS: Record<
 
 export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
   const { colors, radius, fonts, isDark } = useTheme();
-  const { discoveredProxyPorts, trackedProxyPorts, refreshProxyState, trackProxyPort, untrackProxyPort } = useConnection();
+  const { discoveredProxyPorts, trackedProxyPorts, refreshProxyState, trackProxyPort, untrackProxyPort, cacheNamespace } = useConnection();
   const headerHeight = useHeaderHeight();
   const { register, unregister } = useSessionRegistryActions();
   const { height: windowHeight } = useWindowDimensions();
@@ -291,8 +291,27 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
 
   useEffect(() => {
     let cancelled = false;
+    const cacheKey = cacheNamespace ? `${BROWSER_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
+    browserCacheLoadedRef.current = false;
+    setTabs([]);
+    setActiveTabId("");
+    setUrlInput("");
+    setDevsoleStateByTab({});
+    setConsoleEntriesByTab({});
+    setNetworkEntriesByTab({});
+    setElementsSnapshotByTab({});
+    setResourcesSnapshotByTab({});
+    setInfoSnapshotByTab({});
+    pageUrlByTabRef.current = {};
 
-    AsyncStorage.getItem(BROWSER_PANEL_CACHE_STORAGE_KEY)
+    if (!cacheKey) {
+      browserCacheLoadedRef.current = true;
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    AsyncStorage.getItem(cacheKey)
       .then((raw) => {
         if (cancelled || !raw) return;
         const parsed = JSON.parse(raw) as Partial<BrowserPanelCache>;
@@ -323,10 +342,11 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
       cancelled = true;
       if (browserCacheSaveTimerRef.current) clearTimeout(browserCacheSaveTimerRef.current);
     };
-  }, []);
+  }, [cacheNamespace]);
 
   useEffect(() => {
-    if (!browserCacheLoadedRef.current) return;
+    const cacheKey = cacheNamespace ? `${BROWSER_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
+    if (!cacheKey || !browserCacheLoadedRef.current) return;
 
     if (browserCacheSaveTimerRef.current) clearTimeout(browserCacheSaveTimerRef.current);
     browserCacheSaveTimerRef.current = setTimeout(() => {
@@ -343,10 +363,11 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
         pageUrlByTab: pageUrlByTabRef.current,
         savedAt: Date.now(),
       };
-      AsyncStorage.setItem(BROWSER_PANEL_CACHE_STORAGE_KEY, JSON.stringify(cache)).catch(() => {});
+      AsyncStorage.setItem(cacheKey, JSON.stringify(cache)).catch(() => {});
     }, 600);
   }, [
     activeTabId,
+    cacheNamespace,
     consoleEntriesByTab,
     devsoleStateByTab,
     elementsSnapshotByTab,

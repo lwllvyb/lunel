@@ -105,6 +105,7 @@ interface ConnectionContextType {
   status: ConnectionStatus;
   sessionState: SessionState;
   sessionCode: string | null;
+  cacheNamespace: string | null;
   capabilities: Capabilities | null;
   error: string | null;
   isReconnecting: boolean;
@@ -138,6 +139,7 @@ const fallbackConnectionContext: ConnectionContextType = {
   status: 'disconnected',
   sessionState: 'idle',
   sessionCode: null,
+  cacheNamespace: null,
   capabilities: null,
   error: 'Connection unavailable',
   isReconnecting: false,
@@ -295,6 +297,20 @@ function isTerminalReconnectError(error: unknown): boolean {
   return isTerminalReconnectMessage(error instanceof Error ? error.message : String(error));
 }
 
+function hashCacheNamespace(value: string): string {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function getSessionCacheNamespace(sessionPassword: string, sessionCode: string | null): string {
+  const codePart = (sessionCode?.trim() || 'no-code').replace(/[^a-zA-Z0-9._-]/g, '_');
+  return `${codePart}:${hashCacheNamespace(sessionPassword)}`;
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -309,6 +325,7 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
   const [sessionState, setSessionState] = useState<SessionState>('idle');
   const [sessionCode, setSessionCode] = useState<string | null>(null);
+  const [cacheNamespace, setCacheNamespace] = useState<string | null>(null);
   const [capabilities, setCapabilities] = useState<Capabilities | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isReconnecting, setIsReconnecting] = useState(false);
@@ -339,6 +356,11 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
   const reconnectRunIdRef = useRef(0);
   const discoveredPortsRef = useRef<number[]>([]);
   const trackedPortsRef = useRef<number[]>([]);
+  const statusRef = useRef<ConnectionStatus>(status);
+
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
   const setReconnectUiState = useCallback((reason: 'offline' | 'reconnecting' | null) => {
     setInteractionBlockReason(reason);
@@ -1303,6 +1325,11 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
       return;
     }
 
+    if (statusRef.current === 'connected' && v2TransportRef.current) {
+      logger.warn('connection', 'manager health probe failed while transport is connected; keeping active transport');
+      return;
+    }
+
     logger.warn('connection', 'manager reachability lost; entering offline state');
     networkReachableRef.current = false;
     reconnectRunIdRef.current += 1;
@@ -1342,6 +1369,7 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
       setStatus('disconnected');
       setSessionState('idle');
       setSessionCode(null);
+      setCacheNamespace(null);
       sessionCodeRef.current = null;
       sessionPasswordRef.current = null;
       reattachGenerationRef.current = null;
@@ -1382,6 +1410,7 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
     reconnectLoopActiveRef.current = false;
     networkReachableRef.current = true;
     reconnectAttemptRef.current = 0;
+    setCacheNamespace(null);
     setReconnectUiState(null);
     cleanupSockets(false);
 
@@ -1414,6 +1443,7 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
 
     sessionCodeRef.current = assembled.code;
     sessionPasswordRef.current = assembled.password;
+    setCacheNamespace(getSessionCacheNamespace(assembled.password, assembled.code));
     reattachGenerationRef.current = null;
     try {
       gatewaysRef.current = [await getAssignedProxyUrl(assembled.password)];
@@ -1461,6 +1491,7 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
     reconnectLoopActiveRef.current = false;
     networkReachableRef.current = true;
     reconnectAttemptRef.current = 0;
+    setCacheNamespace(null);
     setReconnectUiState(null);
     cleanupSockets(false);
 
@@ -1478,6 +1509,7 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
     try {
       sessionCodeRef.current = stored.sessionCode || null;
       sessionPasswordRef.current = stored.sessionPassword;
+      setCacheNamespace(getSessionCacheNamespace(stored.sessionPassword, stored.sessionCode || null));
       const reattach = await claimReattach(stored.sessionPassword);
       gatewaysRef.current = [reattach.proxyUrl];
       reattachGenerationRef.current = reattach.generation;
@@ -1485,10 +1517,16 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Resume failed';
       logger.error('connection', 'manager proxy lookup failed', { error: msg });
-      setSessionState(err instanceof ProxyLookupError && err.status === 404 ? 'expired' : 'ended');
-      setStatus('error');
-      setError(msg);
-      throw (err instanceof Error ? err : new Error(msg));
+      if (isTerminalReconnectError(err)) {
+        setSessionState(err instanceof ProxyLookupError && err.status === 404 ? 'expired' : 'ended');
+        setStatus('error');
+        setError(msg);
+        throw (err instanceof Error ? err : new Error(msg));
+      }
+
+      setReconnectUiState('reconnecting');
+      void runReconnectLoop('app_active');
+      return;
     }
 
     const gateway = gatewaysRef.current[0];
@@ -1638,6 +1676,7 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
     status,
     sessionState,
     sessionCode,
+    cacheNamespace,
     capabilities,
       error,
       isReconnecting,
@@ -1660,7 +1699,7 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
     sendData,
     fireData,
     onDataEvent,
-  }), [status, sessionState, sessionCode, capabilities, error, isReconnecting, interactionBlockReason, trackedProxyPorts, discoveredProxyPorts, connect, resumeSession, getStoredSession, getPairedSessions, revokePairedSession, removePairedSession, clearStoredSession, endSession, disconnect, refreshProxyState, trackProxyPort, untrackProxyPort, sendControl, sendData, fireData, onDataEvent]);
+  }), [status, sessionState, sessionCode, cacheNamespace, capabilities, error, isReconnecting, interactionBlockReason, trackedProxyPorts, discoveredProxyPorts, connect, resumeSession, getStoredSession, getPairedSessions, revokePairedSession, removePairedSession, clearStoredSession, endSession, disconnect, refreshProxyState, trackProxyPort, untrackProxyPort, sendControl, sendData, fireData, onDataEvent]);
 
   return (
     <ConnectionContext.Provider value={value}>

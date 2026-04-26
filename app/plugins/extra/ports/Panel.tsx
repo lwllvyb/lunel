@@ -14,6 +14,7 @@ import Header, { useHeaderHeight } from "@/components/Header";
 import NotConnected from '@/components/NotConnected';
 import Loading from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useConnection } from '@/contexts/ConnectionContext';
 import { PluginPanelProps } from '../../types';
 import { useApi, PortInfo, ApiError } from '@/hooks/useApi';
 
@@ -28,6 +29,7 @@ function PortsPanel({ instanceId, isActive }: PluginPanelProps) {
   const { colors, fonts, spacing, radius } = useTheme();
   const headerHeight = useHeaderHeight();
   const { ports: portsApi, isConnected } = useApi();
+  const { cacheNamespace } = useConnection();
 
   const [portsList, setPortsList] = useState<PortInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,9 +64,18 @@ function PortsPanel({ instanceId, isActive }: PluginPanelProps) {
   }, [portsList]);
 
   useEffect(() => {
+    const cacheKey = cacheNamespace ? `${PORTS_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
+    portsCacheLoadedRef.current = false;
+    setPortsList([]);
+    portsListRef.current = [];
+    if (!cacheKey) {
+      portsCacheLoadedRef.current = true;
+      return;
+    }
+
     let cancelled = false;
 
-    AsyncStorage.getItem(PORTS_PANEL_CACHE_STORAGE_KEY)
+    AsyncStorage.getItem(cacheKey)
       .then((raw) => {
         if (cancelled || !raw) return;
         const parsed = JSON.parse(raw) as Partial<PortsPanelCache>;
@@ -82,10 +93,11 @@ function PortsPanel({ instanceId, isActive }: PluginPanelProps) {
       cancelled = true;
       if (portsCacheSaveTimerRef.current) clearTimeout(portsCacheSaveTimerRef.current);
     };
-  }, []);
+  }, [cacheNamespace]);
 
   useEffect(() => {
-    if (!portsCacheLoadedRef.current) return;
+    const cacheKey = cacheNamespace ? `${PORTS_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
+    if (!cacheKey || !portsCacheLoadedRef.current) return;
 
     if (portsCacheSaveTimerRef.current) clearTimeout(portsCacheSaveTimerRef.current);
     portsCacheSaveTimerRef.current = setTimeout(() => {
@@ -93,9 +105,9 @@ function PortsPanel({ instanceId, isActive }: PluginPanelProps) {
         portsList,
         savedAt: Date.now(),
       };
-      AsyncStorage.setItem(PORTS_PANEL_CACHE_STORAGE_KEY, JSON.stringify(cache)).catch(() => {});
+      AsyncStorage.setItem(cacheKey, JSON.stringify(cache)).catch(() => {});
     }, 400);
-  }, [portsList]);
+  }, [cacheNamespace, portsList]);
 
   useEffect(() => {
     if (isActive && isConnected) loadPorts();

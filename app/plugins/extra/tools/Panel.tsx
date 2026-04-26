@@ -37,6 +37,7 @@ import {
 } from 'lucide-react-native';
 import Header, { useHeaderHeight } from "@/components/Header";
 import { useTheme } from '@/contexts/ThemeContext';
+import { useConnection } from '@/contexts/ConnectionContext';
 import { typography } from '@/constants/themes';
 import { PluginPanelProps } from '../../types';
 import { gPI } from '../../gpi';
@@ -69,6 +70,7 @@ interface Tool {
 function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) {
   const { colors, fonts, spacing, radius } = useTheme();
   const headerHeight = useHeaderHeight();
+  const { cacheNamespace } = useConnection();
   const { height: keyboardHeightSV } = useReanimatedKeyboardAnimation();
   const rootAnimatedStyle = useAnimatedStyle(() => ({
     marginBottom: Math.max(0, -keyboardHeightSV.value - bottomBarHeight),
@@ -88,12 +90,28 @@ function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps)
 
   // Load recent tools on mount
   useEffect(() => {
-    lunelApi.storage.jsons.read<string[]>(HISTORY_KEY).then(data => {
+    const historyKey = cacheNamespace ? `${HISTORY_KEY}-${cacheNamespace}` : null;
+    const cacheKey = cacheNamespace ? `${TOOL_PANEL_CACHE_KEY}-${cacheNamespace}` : null;
+    toolCacheLoadedRef.current = false;
+    setInput('');
+    setOutput('');
+    setError('');
+    setActiveCategory('format');
+    setSelectedToolId(null);
+    setLastUsedTool(null);
+    setRecentToolIds([]);
+
+    if (!historyKey || !cacheKey) {
+      toolCacheLoadedRef.current = true;
+      return;
+    }
+
+    lunelApi.storage.jsons.read<string[]>(historyKey).then(data => {
       if (data) setRecentToolIds(data);
     });
 
     let cancelled = false;
-    lunelApi.storage.jsons.read<ToolPanelCache>(TOOL_PANEL_CACHE_KEY)
+    lunelApi.storage.jsons.read<ToolPanelCache>(cacheKey)
       .then((cache) => {
         if (cancelled || !cache) return;
         setInput(typeof cache.input === 'string' ? cache.input : '');
@@ -111,10 +129,11 @@ function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps)
       cancelled = true;
       if (toolCacheSaveTimerRef.current) clearTimeout(toolCacheSaveTimerRef.current);
     };
-  }, []);
+  }, [cacheNamespace]);
 
   useEffect(() => {
-    if (!toolCacheLoadedRef.current) return;
+    const cacheKey = cacheNamespace ? `${TOOL_PANEL_CACHE_KEY}-${cacheNamespace}` : null;
+    if (!cacheKey || !toolCacheLoadedRef.current) return;
 
     if (toolCacheSaveTimerRef.current) clearTimeout(toolCacheSaveTimerRef.current);
     toolCacheSaveTimerRef.current = setTimeout(() => {
@@ -126,19 +145,22 @@ function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps)
         lastUsedTool,
         savedAt: Date.now(),
       };
-      lunelApi.storage.jsons.write(TOOL_PANEL_CACHE_KEY, cache).catch(() => {});
+      lunelApi.storage.jsons.write(cacheKey, cache).catch(() => {});
     }, 400);
-  }, [activeCategory, input, lastUsedTool, output, selectedToolId]);
+  }, [activeCategory, cacheNamespace, input, lastUsedTool, output, selectedToolId]);
 
   // Save recent tool
   const addToRecent = useCallback((toolId: string) => {
     setRecentToolIds(prev => {
       const filtered = prev.filter(id => id !== toolId);
       const updated = [toolId, ...filtered].slice(0, 5);
-      lunelApi.storage.jsons.write(HISTORY_KEY, updated);
+      const historyKey = cacheNamespace ? `${HISTORY_KEY}-${cacheNamespace}` : null;
+      if (historyKey) {
+        lunelApi.storage.jsons.write(historyKey, updated);
+      }
       return updated;
     });
-  }, []);
+  }, [cacheNamespace]);
 
   // Paste from clipboard
   const pasteFromClipboard = async () => {

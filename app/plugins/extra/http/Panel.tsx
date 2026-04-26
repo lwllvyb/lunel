@@ -16,6 +16,7 @@ import Header, { useHeaderHeight } from "@/components/Header";
 import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '@/contexts/ThemeContext';
 import { typography } from '@/constants/themes';
+import { useConnection } from '@/contexts/ConnectionContext';
 import { PluginPanelProps } from '../../types';
 import { lunelApi } from '@/lib/storage';
 import { useApi, ApiError } from '@/hooks/useApi';
@@ -73,13 +74,13 @@ type HttpPanelCache = {
   savedAt: number;
 };
 
-async function loadHistory(): Promise<HistoryItem[]> {
-  const data = await lunelApi.storage.jsons.read<HistoryItem[]>(HISTORY_KEY);
+async function loadHistory(key: string): Promise<HistoryItem[]> {
+  const data = await lunelApi.storage.jsons.read<HistoryItem[]>(key);
   return data || [];
 }
 
-async function saveHistory(history: HistoryItem[]) {
-  await lunelApi.storage.jsons.write(HISTORY_KEY, history);
+async function saveHistory(key: string, history: HistoryItem[]) {
+  await lunelApi.storage.jsons.write(key, history);
 }
 
 const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
@@ -88,6 +89,7 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
   const { colors, fonts, spacing } = useTheme();
   const headerHeight = useHeaderHeight();
   const { http: httpApi, isConnected } = useApi();
+  const { cacheNamespace } = useConnection();
 
   const [method, setMethod] = useState<HttpMethod>('GET');
   const [url, setUrl] = useState('https://catfact.ninja/fact');
@@ -148,10 +150,33 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
 
   // Load history on mount
   useEffect(() => {
-    loadHistory().then(setHistory);
-
     let cancelled = false;
-    lunelApi.storage.jsons.read<HttpPanelCache>(HTTP_PANEL_CACHE_KEY)
+    const historyKey = cacheNamespace ? `${HISTORY_KEY}-${cacheNamespace}` : null;
+    const cacheKey = cacheNamespace ? `${HTTP_PANEL_CACHE_KEY}-${cacheNamespace}` : null;
+    httpCacheLoadedRef.current = false;
+    setHistory([]);
+    setMethod('GET');
+    setUrl('https://catfact.ninja/fact');
+    setHeaders([{ id: '1', key: 'Content-Type', value: 'application/json', enabled: true }]);
+    setBody('');
+    setResponse(null);
+    setActiveTab('client');
+    setUseCliProxy(true);
+    setRequestExpanded(true);
+    setResponseHeadersExpanded(false);
+
+    if (!historyKey || !cacheKey) {
+      httpCacheLoadedRef.current = true;
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    loadHistory(historyKey).then((items) => {
+      if (!cancelled) setHistory(items);
+    });
+
+    lunelApi.storage.jsons.read<HttpPanelCache>(cacheKey)
       .then((cache) => {
         if (cancelled || !cache) return;
         if (METHODS.includes(cache.method)) setMethod(cache.method);
@@ -178,10 +203,11 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
       cancelled = true;
       if (httpCacheSaveTimerRef.current) clearTimeout(httpCacheSaveTimerRef.current);
     };
-  }, []);
+  }, [cacheNamespace]);
 
   useEffect(() => {
-    if (!httpCacheLoadedRef.current) return;
+    const cacheKey = cacheNamespace ? `${HTTP_PANEL_CACHE_KEY}-${cacheNamespace}` : null;
+    if (!cacheKey || !httpCacheLoadedRef.current) return;
 
     if (httpCacheSaveTimerRef.current) clearTimeout(httpCacheSaveTimerRef.current);
     httpCacheSaveTimerRef.current = setTimeout(() => {
@@ -197,9 +223,9 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
         responseHeadersExpanded,
         savedAt: Date.now(),
       };
-      lunelApi.storage.jsons.write(HTTP_PANEL_CACHE_KEY, cache).catch(() => {});
+      lunelApi.storage.jsons.write(cacheKey, cache).catch(() => {});
     }, 500);
-  }, [activeTab, body, headers, method, requestExpanded, response, responseHeadersExpanded, url, useCliProxy]);
+  }, [activeTab, body, cacheNamespace, headers, method, requestExpanded, response, responseHeadersExpanded, url, useCliProxy]);
 
   const addHeader = () => {
     setHeaders([...headers, { id: Date.now().toString(), key: '', value: '', enabled: true }]);
@@ -301,7 +327,10 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
       };
       setHistory(prev => {
         const updated = [newItem, ...prev].slice(0, 50);
-        saveHistory(updated);
+        const historyKey = cacheNamespace ? `${HISTORY_KEY}-${cacheNamespace}` : null;
+        if (historyKey) {
+          saveHistory(historyKey, updated);
+        }
         return updated;
       });
     } catch (error) {
@@ -371,7 +400,10 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
   const clearHistory = async () => {
     setHistory([]);
     setHistorySearch('');
-    await saveHistory([]);
+    const historyKey = cacheNamespace ? `${HISTORY_KEY}-${cacheNamespace}` : null;
+    if (historyKey) {
+      await saveHistory(historyKey, []);
+    }
   };
 
   const getStatusColor = (status: number) => {

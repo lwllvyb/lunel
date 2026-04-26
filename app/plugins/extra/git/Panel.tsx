@@ -179,7 +179,7 @@ const GitFileIcon = memo(function GitFileIcon({
 function GitPanel({ instanceId, isActive }: PluginPanelProps) {
   const { colors, fonts, spacing, radius } = useTheme();
   const headerHeight = useHeaderHeight();
-  const { status: connStatus } = useConnection();
+  const { status: connStatus, cacheNamespace } = useConnection();
   const { git, fs } = useApi();
   const isConnected = connStatus === 'connected';
 
@@ -281,8 +281,24 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
 
   useEffect(() => {
     let cancelled = false;
+    const cacheKey = cacheNamespace ? `${GIT_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
+    gitCacheLoadedRef.current = false;
+    setActiveTab('changes');
+    setGitStatus(null);
+    setCommits([]);
+    setBranches(null);
+    setCommitLimit(50);
+    commitLimitRef.current = 50;
+    hasGitSnapshotRef.current = false;
 
-    AsyncStorage.getItem(GIT_PANEL_CACHE_STORAGE_KEY)
+    if (!cacheKey) {
+      gitCacheLoadedRef.current = true;
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    AsyncStorage.getItem(cacheKey)
       .then((raw) => {
         if (cancelled || !raw) return;
         const parsed = JSON.parse(raw) as Partial<GitPanelCache>;
@@ -309,11 +325,12 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
       cancelled = true;
       if (gitCacheSaveTimerRef.current) clearTimeout(gitCacheSaveTimerRef.current);
     };
-  }, []);
+  }, [cacheNamespace]);
 
   useEffect(() => {
+    const cacheKey = cacheNamespace ? `${GIT_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
     hasGitSnapshotRef.current = !!gitStatus || commits.length > 0 || !!branches;
-    if (!gitCacheLoadedRef.current) return;
+    if (!cacheKey || !gitCacheLoadedRef.current) return;
 
     if (gitCacheSaveTimerRef.current) clearTimeout(gitCacheSaveTimerRef.current);
     gitCacheSaveTimerRef.current = setTimeout(() => {
@@ -325,9 +342,9 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
         commitLimit,
         savedAt: Date.now(),
       };
-      AsyncStorage.setItem(GIT_PANEL_CACHE_STORAGE_KEY, JSON.stringify(cache)).catch(() => {});
+      AsyncStorage.setItem(cacheKey, JSON.stringify(cache)).catch(() => {});
     }, 500);
-  }, [activeTab, branches, commitLimit, commits, gitStatus]);
+  }, [activeTab, branches, cacheNamespace, commitLimit, commits, gitStatus]);
 
   useEffect(() => {
     if (isConnected && isActive) loadAll();

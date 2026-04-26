@@ -2497,7 +2497,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
   const { colors, radius, fonts } = useTheme();
   const { settings } = useAppSettings();
   const headerHeight = useHeaderHeight();
-  const { status, sessionState } = useConnection();
+  const { status, sessionState, cacheNamespace } = useConnection();
   const { fs } = useApi();
   const searchWorkspaceFiles = fs.searchFiles;
   const readWorkspaceFile = fs.read;
@@ -2670,10 +2670,21 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
 
   useEffect(() => {
     let cancelled = false;
+    const cacheKey = cacheNamespace ? `${AI_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
+    aiCacheLoadedRef.current = false;
+    setSessionTabs([]);
+    setMessagesMap({});
+    setCodexUsageBySession({});
+    setActiveTabId(null);
 
     const loadAiCache = async () => {
+      if (!cacheKey) {
+        aiCacheLoadedRef.current = true;
+        return;
+      }
+
       try {
-        const raw = await AsyncStorage.getItem(AI_PANEL_CACHE_STORAGE_KEY);
+        const raw = await AsyncStorage.getItem(cacheKey);
         if (!raw || cancelled) return;
 
         const parsed = JSON.parse(raw) as Partial<AIPanelCache>;
@@ -2708,10 +2719,11 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
         aiCacheSaveTimerRef.current = null;
       }
     };
-  }, []);
+  }, [cacheNamespace]);
 
   useEffect(() => {
-    if (!aiCacheLoadedRef.current) return;
+    const cacheKey = cacheNamespace ? `${AI_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
+    if (!cacheKey || !aiCacheLoadedRef.current) return;
     if (aiCacheSaveTimerRef.current) {
       clearTimeout(aiCacheSaveTimerRef.current);
     }
@@ -2725,9 +2737,9 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
         codexUsageBySession,
         savedAt: Date.now(),
       };
-      AsyncStorage.setItem(AI_PANEL_CACHE_STORAGE_KEY, JSON.stringify(cache)).catch(() => {});
+      AsyncStorage.setItem(cacheKey, JSON.stringify(cache)).catch(() => {});
     }, 600);
-  }, [activeTabId, codexUsageBySession, messagesMap, sessionTabs]);
+  }, [activeTabId, cacheNamespace, codexUsageBySession, messagesMap, sessionTabs]);
 
   useEffect(() => {
     streamingBySessionRef.current = streamingBySession;

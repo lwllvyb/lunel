@@ -21,6 +21,7 @@ import Header, { useHeaderHeight } from "@/components/Header";
 import NotConnected from '@/components/NotConnected';
 import Loading from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useConnection } from '@/contexts/ConnectionContext';
 import { PluginPanelProps } from '../../types';
 import { useApi, SystemInfo, ApiError } from '@/hooks/useApi';
 
@@ -158,6 +159,7 @@ function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
   const { colors, fonts, spacing, radius } = useTheme();
   const headerHeight = useHeaderHeight();
   const { monitor: monitorApi, isConnected } = useApi();
+  const { cacheNamespace } = useConnection();
 
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -192,9 +194,20 @@ function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
   }, [systemInfo]);
 
   useEffect(() => {
+    const cacheKey = cacheNamespace ? `${MONITOR_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
+    monitorCacheLoadedRef.current = false;
+    setSystemInfo(null);
+    setCpuHistory([]);
+    setCoreHistory([]);
+    systemInfoRef.current = null;
+    if (!cacheKey) {
+      monitorCacheLoadedRef.current = true;
+      return;
+    }
+
     let cancelled = false;
 
-    AsyncStorage.getItem(MONITOR_PANEL_CACHE_STORAGE_KEY)
+    AsyncStorage.getItem(cacheKey)
       .then((raw) => {
         if (cancelled || !raw) return;
         const parsed = JSON.parse(raw) as Partial<MonitorPanelCache>;
@@ -214,10 +227,11 @@ function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
       cancelled = true;
       if (monitorCacheSaveTimerRef.current) clearTimeout(monitorCacheSaveTimerRef.current);
     };
-  }, []);
+  }, [cacheNamespace]);
 
   useEffect(() => {
-    if (!monitorCacheLoadedRef.current) return;
+    const cacheKey = cacheNamespace ? `${MONITOR_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
+    if (!cacheKey || !monitorCacheLoadedRef.current) return;
 
     if (monitorCacheSaveTimerRef.current) clearTimeout(monitorCacheSaveTimerRef.current);
     monitorCacheSaveTimerRef.current = setTimeout(() => {
@@ -227,9 +241,9 @@ function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
         coreHistory,
         savedAt: Date.now(),
       };
-      AsyncStorage.setItem(MONITOR_PANEL_CACHE_STORAGE_KEY, JSON.stringify(cache)).catch(() => {});
+      AsyncStorage.setItem(cacheKey, JSON.stringify(cache)).catch(() => {});
     }, 400);
-  }, [coreHistory, cpuHistory, systemInfo]);
+  }, [cacheNamespace, coreHistory, cpuHistory, systemInfo]);
 
   useEffect(() => {
     if (isActive && isConnected) loadSystemInfo();

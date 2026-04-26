@@ -444,7 +444,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
   const { colors, fonts, spacing, radius, isDark } = useTheme();
   const headerHeight = useHeaderHeight();
 
-  const { status, capabilities } = useConnection();
+  const { status, capabilities, cacheNamespace } = useConnection();
   const { fs } = useApi();
   const { openTab } = usePlugins();
   const isConnected = status === 'connected';
@@ -511,10 +511,20 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
 
   useEffect(() => {
     let cancelled = false;
+    const cacheKey = cacheNamespace ? `${EXPLORER_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
+    explorerCacheLoadedRef.current = false;
+    setCurrentPath('.');
+    setItems([]);
+    setDirectoryItemCounts({});
 
     const loadExplorerCache = async () => {
+      if (!cacheKey) {
+        explorerCacheLoadedRef.current = true;
+        return;
+      }
+
       try {
-        const raw = await AsyncStorage.getItem(EXPLORER_CACHE_STORAGE_KEY);
+        const raw = await AsyncStorage.getItem(cacheKey);
         if (!raw || cancelled) return;
 
         const parsed = JSON.parse(raw) as Partial<ExplorerCache>;
@@ -545,10 +555,11 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
         explorerCacheSaveTimerRef.current = null;
       }
     };
-  }, []);
+  }, [cacheNamespace]);
 
   useEffect(() => {
-    if (!explorerCacheLoadedRef.current) return;
+    const cacheKey = cacheNamespace ? `${EXPLORER_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
+    if (!cacheKey || !explorerCacheLoadedRef.current) return;
     if (explorerCacheSaveTimerRef.current) {
       clearTimeout(explorerCacheSaveTimerRef.current);
     }
@@ -561,9 +572,9 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
         directoryItemCounts,
         savedAt: Date.now(),
       };
-      AsyncStorage.setItem(EXPLORER_CACHE_STORAGE_KEY, JSON.stringify(cache)).catch(() => {});
+      AsyncStorage.setItem(cacheKey, JSON.stringify(cache)).catch(() => {});
     }, 400);
-  }, [currentPath, directoryItemCounts, items]);
+  }, [cacheNamespace, currentPath, directoryItemCounts, items]);
 
   const openWithSystem = async (item: FileEntry, pathOverride?: string) => {
     const filePath = pathOverride ?? (currentPath === '.' ? item.name : `${currentPath}/${item.name}`);

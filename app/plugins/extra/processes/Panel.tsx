@@ -27,6 +27,7 @@ import Header, { useHeaderHeight } from "@/components/Header";
 import NotConnected from '@/components/NotConnected';
 import Loading from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useConnection } from '@/contexts/ConnectionContext';
 import { PluginPanelProps } from '../../types';
 import { useApi, ProcessInfo, ApiError } from '@/hooks/useApi';
 
@@ -45,6 +46,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
   const isIPad = Platform.OS === 'ios' && Platform.isPad || width >= 768;
   const headerHeight = useHeaderHeight();
   const { processes: processApi, isConnected } = useApi();
+  const { cacheNamespace } = useConnection();
 
   const [processList, setProcessList] = useState<ProcessInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,9 +93,20 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
   }, [processList]);
 
   useEffect(() => {
+    const cacheKey = cacheNamespace ? `${PROCESSES_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
+    processesCacheLoadedRef.current = false;
+    setProcessList([]);
+    setSelectedProcess(null);
+    setProcessOutput('');
+    processListRef.current = [];
+    if (!cacheKey) {
+      processesCacheLoadedRef.current = true;
+      return;
+    }
+
     let cancelled = false;
 
-    AsyncStorage.getItem(PROCESSES_PANEL_CACHE_STORAGE_KEY)
+    AsyncStorage.getItem(cacheKey)
       .then((raw) => {
         if (cancelled || !raw) return;
         const parsed = JSON.parse(raw) as Partial<ProcessesPanelCache>;
@@ -113,10 +126,11 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
       cancelled = true;
       if (processesCacheSaveTimerRef.current) clearTimeout(processesCacheSaveTimerRef.current);
     };
-  }, []);
+  }, [cacheNamespace]);
 
   useEffect(() => {
-    if (!processesCacheLoadedRef.current) return;
+    const cacheKey = cacheNamespace ? `${PROCESSES_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
+    if (!cacheKey || !processesCacheLoadedRef.current) return;
 
     if (processesCacheSaveTimerRef.current) clearTimeout(processesCacheSaveTimerRef.current);
     processesCacheSaveTimerRef.current = setTimeout(() => {
@@ -126,9 +140,9 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
         processOutput,
         savedAt: Date.now(),
       };
-      AsyncStorage.setItem(PROCESSES_PANEL_CACHE_STORAGE_KEY, JSON.stringify(cache)).catch(() => {});
+      AsyncStorage.setItem(cacheKey, JSON.stringify(cache)).catch(() => {});
     }, 400);
-  }, [processList, processOutput, selectedProcess]);
+  }, [cacheNamespace, processList, processOutput, selectedProcess]);
 
   // Load on mount and when active
   useEffect(() => {

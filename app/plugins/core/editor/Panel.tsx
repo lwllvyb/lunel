@@ -310,7 +310,7 @@ function createEditorHtml({
 
 export default function EditorPanel({ isActive, bottomBarHeight: _bottomBarHeight }: PluginPanelProps) {
   const { colors, fonts, fontSelection, isDark } = useTheme();
-  const { fireData, onDataEvent, status } = useConnection();
+  const { fireData, onDataEvent, status, cacheNamespace } = useConnection();
   const { openTab, setDrawerContentVariant } = usePlugins();
   const { config } = useEditorConfig();
   const { showEditorReviewButton, requestEditorReview } = useReviewPrompt();
@@ -376,8 +376,20 @@ export default function EditorPanel({ isActive, bottomBarHeight: _bottomBarHeigh
 
   useEffect(() => {
     let cancelled = false;
+    const cacheKey = cacheNamespace ? `${EDITOR_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
+    editorCacheLoadedRef.current = false;
+    webViewContentRef.current = {};
+    setTabs([]);
+    setActiveTabId(null);
 
-    AsyncStorage.getItem(EDITOR_PANEL_CACHE_STORAGE_KEY)
+    if (!cacheKey) {
+      editorCacheLoadedRef.current = true;
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    AsyncStorage.getItem(cacheKey)
       .then((raw) => {
         if (cancelled || !raw) return;
         const parsed = JSON.parse(raw) as Partial<EditorPanelCache>;
@@ -404,14 +416,15 @@ export default function EditorPanel({ isActive, bottomBarHeight: _bottomBarHeigh
         if (!cancelled) editorCacheLoadedRef.current = true;
       });
 
-    return () => {
+  return () => {
       cancelled = true;
       if (editorCacheSaveTimerRef.current) clearTimeout(editorCacheSaveTimerRef.current);
     };
-  }, []);
+  }, [cacheNamespace]);
 
   useEffect(() => {
-    if (!editorCacheLoadedRef.current) return;
+    const cacheKey = cacheNamespace ? `${EDITOR_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
+    if (!cacheKey || !editorCacheLoadedRef.current) return;
 
     if (editorCacheSaveTimerRef.current) clearTimeout(editorCacheSaveTimerRef.current);
     editorCacheSaveTimerRef.current = setTimeout(() => {
@@ -425,9 +438,9 @@ export default function EditorPanel({ isActive, bottomBarHeight: _bottomBarHeigh
         contentByTab: webViewContentRef.current,
         savedAt: Date.now(),
       };
-      AsyncStorage.setItem(EDITOR_PANEL_CACHE_STORAGE_KEY, JSON.stringify(cache)).catch(() => {});
+      AsyncStorage.setItem(cacheKey, JSON.stringify(cache)).catch(() => {});
     }, 500);
-  }, [activeTabId, tabs]);
+  }, [activeTabId, cacheNamespace, tabs]);
 
   const clearSaveTimer = useCallback((tabId: string) => {
     const existing = saveTimeoutsRef.current[tabId];
