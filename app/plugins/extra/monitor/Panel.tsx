@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+  AppState,
   Text,
   TouchableOpacity,
   View,
@@ -159,7 +160,8 @@ function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
   const { colors, fonts, spacing, radius } = useTheme();
   const headerHeight = useHeaderHeight();
   const { monitor: monitorApi, isConnected } = useApi();
-  const { cacheNamespace } = useConnection();
+  const { cacheNamespace, syncGeneration } = useConnection();
+  const getSystemInfo = monitorApi.system;
 
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -168,8 +170,10 @@ function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
   const [coreHistory, setCoreHistory] = useState<number[][]>([]);
   const monitorCacheLoadedRef = useRef(false);
   const monitorCacheSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const monitorCacheSnapshotRef = useRef<{ cacheKey: string; cache: MonitorPanelCache } | null>(null);
   const systemInfoRef = useRef<SystemInfo | null>(null);
   const systemInfoRequestIdRef = useRef(0);
+  const [monitorCacheReadyVersion, setMonitorCacheReadyVersion] = useState(0);
 
   const getUsageColor = useCallback((percent: number): string => {
     if (percent < 50) return colors.terminal.green;
@@ -183,7 +187,7 @@ function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
     try {
       setError(null);
       setLoading(!systemInfoRef.current);
-      const result = await monitorApi.system();
+      const result = await getSystemInfo();
       if (systemInfoRequestIdRef.current !== requestId) return;
       setSystemInfo(result);
     } catch (err) {
@@ -193,21 +197,35 @@ function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
       if (systemInfoRequestIdRef.current !== requestId) return;
       setLoading(false);
     }
-  }, [isConnected, monitorApi]);
+  }, [getSystemInfo, isConnected]);
 
   useEffect(() => {
     systemInfoRef.current = systemInfo;
   }, [systemInfo]);
 
+  const flushMonitorCache = useCallback(() => {
+    if (monitorCacheSaveTimerRef.current) {
+      clearTimeout(monitorCacheSaveTimerRef.current);
+      monitorCacheSaveTimerRef.current = null;
+    }
+
+    const snapshot = monitorCacheSnapshotRef.current;
+    if (!snapshot) return;
+    AsyncStorage.setItem(snapshot.cacheKey, JSON.stringify(snapshot.cache)).catch(() => {});
+  }, []);
+
   useEffect(() => {
     const cacheKey = cacheNamespace ? `${MONITOR_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
     monitorCacheLoadedRef.current = false;
-    setSystemInfo(null);
-    setCpuHistory([]);
-    setCoreHistory([]);
-    systemInfoRef.current = null;
+    monitorCacheSnapshotRef.current = null;
+    setMonitorCacheReadyVersion(0);
     if (!cacheKey) {
+      setSystemInfo(null);
+      setCpuHistory([]);
+      setCoreHistory([]);
+      systemInfoRef.current = null;
       monitorCacheLoadedRef.current = true;
+      setMonitorCacheReadyVersion((current) => current + 1);
       return;
     }
 
@@ -215,7 +233,14 @@ function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
 
     AsyncStorage.getItem(cacheKey)
       .then((raw) => {
-        if (cancelled || !raw) return;
+        if (cancelled) return;
+        if (!raw) {
+          setSystemInfo(null);
+          setCpuHistory([]);
+          setCoreHistory([]);
+          systemInfoRef.current = null;
+          return;
+        }
         const parsed = JSON.parse(raw) as Partial<MonitorPanelCache>;
         const cachedSystemInfo = parsed.systemInfo ?? null;
         setSystemInfo(cachedSystemInfo);
@@ -224,42 +249,72 @@ function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
         systemInfoRef.current = cachedSystemInfo;
         if (cachedSystemInfo) setLoading(false);
       })
-      .catch(() => {})
+      .catch(() => {
+        if (cancelled) return;
+        setSystemInfo(null);
+        setCpuHistory([]);
+        setCoreHistory([]);
+        systemInfoRef.current = null;
+      })
       .finally(() => {
-        if (!cancelled) monitorCacheLoadedRef.current = true;
+        if (!cancelled) {
+          monitorCacheLoadedRef.current = true;
+          setMonitorCacheReadyVersion((current) => current + 1);
+        }
       });
 
     return () => {
       cancelled = true;
-      if (monitorCacheSaveTimerRef.current) clearTimeout(monitorCacheSaveTimerRef.current);
+      flushMonitorCache();
     };
-  }, [cacheNamespace]);
+  }, [cacheNamespace, flushMonitorCache]);
 
   useEffect(() => {
     const cacheKey = cacheNamespace ? `${MONITOR_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
-    if (!cacheKey || !monitorCacheLoadedRef.current) return;
+    if (!cacheKey || !monitorCacheLoadedRef.current) {
+      if (!cacheKey) monitorCacheSnapshotRef.current = null;
+      return;
+    }
 
     if (monitorCacheSaveTimerRef.current) clearTimeout(monitorCacheSaveTimerRef.current);
-    monitorCacheSaveTimerRef.current = setTimeout(() => {
-      const cache: MonitorPanelCache = {
+    monitorCacheSnapshotRef.current = {
+      cacheKey,
+      cache: {
         systemInfo,
         cpuHistory,
         coreHistory,
         savedAt: Date.now(),
-      };
-      AsyncStorage.setItem(cacheKey, JSON.stringify(cache)).catch(() => {});
+      },
+    };
+    monitorCacheSaveTimerRef.current = setTimeout(() => {
+      monitorCacheSaveTimerRef.current = null;
+      flushMonitorCache();
     }, 400);
-  }, [cacheNamespace, coreHistory, cpuHistory, systemInfo]);
+  }, [cacheNamespace, coreHistory, cpuHistory, flushMonitorCache, systemInfo]);
 
   useEffect(() => {
-    if (isActive && isConnected) loadSystemInfo();
-  }, [isActive, isConnected, loadSystemInfo]);
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState !== 'active') {
+        flushMonitorCache();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+      flushMonitorCache();
+    };
+  }, [flushMonitorCache]);
 
   useEffect(() => {
-    if (!isActive || !isConnected) return;
+    if (!isConnected || monitorCacheReadyVersion === 0) return;
+    loadSystemInfo();
+  }, [isConnected, loadSystemInfo, monitorCacheReadyVersion, syncGeneration]);
+
+  useEffect(() => {
+    if (!isActive || !isConnected || monitorCacheReadyVersion === 0) return;
     const interval = setInterval(loadSystemInfo, AUTO_REFRESH_MS);
     return () => clearInterval(interval);
-  }, [isActive, isConnected, loadSystemInfo]);
+  }, [isActive, isConnected, loadSystemInfo, monitorCacheReadyVersion]);
 
   useEffect(() => {
     if (!systemInfo) return;

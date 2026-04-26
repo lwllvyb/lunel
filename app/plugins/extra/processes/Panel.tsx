@@ -9,6 +9,7 @@ import {
   View,
   ActivityIndicator,
   Alert,
+  AppState,
   Platform,
   useWindowDimensions,
 } from 'react-native';
@@ -46,7 +47,12 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
   const isIPad = Platform.OS === 'ios' && Platform.isPad || width >= 768;
   const headerHeight = useHeaderHeight();
   const { processes: processApi, isConnected } = useApi();
-  const { cacheNamespace } = useConnection();
+  const { cacheNamespace, syncGeneration } = useConnection();
+  const listProcesses = processApi.list;
+  const getProcessOutput = processApi.getOutput;
+  const killProcessByPid = processApi.kill;
+  const spawnProcessWithCommand = processApi.spawn;
+  const clearProcessOutputByChannel = processApi.clearOutput;
 
   const [processList, setProcessList] = useState<ProcessInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,9 +64,11 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
   const [outputLoading, setOutputLoading] = useState(false);
   const processesCacheLoadedRef = useRef(false);
   const processesCacheSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const processesCacheSnapshotRef = useRef<{ cacheKey: string; cache: ProcessesPanelCache } | null>(null);
   const processListRef = useRef<ProcessInfo[]>([]);
   const processListRequestIdRef = useRef(0);
   const processOutputRequestIdRef = useRef(0);
+  const [processesCacheReadyVersion, setProcessesCacheReadyVersion] = useState(0);
 
   // Spawn form state
   const [showSpawnForm, setShowSpawnForm] = useState(false);
@@ -82,7 +90,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
     try {
       setError(null);
       setLoading(processListRef.current.length === 0);
-      const result = await processApi.list();
+      const result = await listProcesses();
       if (processListRequestIdRef.current !== requestId) return;
       setProcessList(result);
     } catch (err) {
@@ -93,21 +101,35 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
       if (processListRequestIdRef.current !== requestId) return;
       setLoading(false);
     }
-  }, [isConnected, processApi]);
+  }, [isConnected, listProcesses]);
 
   useEffect(() => {
     processListRef.current = processList;
   }, [processList]);
 
+  const flushProcessesCache = useCallback(() => {
+    if (processesCacheSaveTimerRef.current) {
+      clearTimeout(processesCacheSaveTimerRef.current);
+      processesCacheSaveTimerRef.current = null;
+    }
+
+    const snapshot = processesCacheSnapshotRef.current;
+    if (!snapshot) return;
+    AsyncStorage.setItem(snapshot.cacheKey, JSON.stringify(snapshot.cache)).catch(() => {});
+  }, []);
+
   useEffect(() => {
     const cacheKey = cacheNamespace ? `${PROCESSES_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
     processesCacheLoadedRef.current = false;
-    setProcessList([]);
-    setSelectedProcess(null);
-    setProcessOutput('');
-    processListRef.current = [];
+    processesCacheSnapshotRef.current = null;
+    setProcessesCacheReadyVersion(0);
     if (!cacheKey) {
+      setProcessList([]);
+      setSelectedProcess(null);
+      setProcessOutput('');
+      processListRef.current = [];
       processesCacheLoadedRef.current = true;
+      setProcessesCacheReadyVersion((current) => current + 1);
       return;
     }
 
@@ -115,7 +137,14 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
 
     AsyncStorage.getItem(cacheKey)
       .then((raw) => {
-        if (cancelled || !raw) return;
+        if (cancelled) return;
+        if (!raw) {
+          setProcessList([]);
+          setSelectedProcess(null);
+          setProcessOutput('');
+          processListRef.current = [];
+          return;
+        }
         const parsed = JSON.parse(raw) as Partial<ProcessesPanelCache>;
         const cachedProcesses = Array.isArray(parsed.processList) ? parsed.processList : [];
         setProcessList(cachedProcesses);
@@ -124,55 +153,83 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
         processListRef.current = cachedProcesses;
         if (cachedProcesses.length > 0 || parsed.selectedProcess) setLoading(false);
       })
-      .catch(() => {})
+      .catch(() => {
+        if (cancelled) return;
+        setProcessList([]);
+        setSelectedProcess(null);
+        setProcessOutput('');
+        processListRef.current = [];
+      })
       .finally(() => {
-        if (!cancelled) processesCacheLoadedRef.current = true;
+        if (!cancelled) {
+          processesCacheLoadedRef.current = true;
+          setProcessesCacheReadyVersion((current) => current + 1);
+        }
       });
 
     return () => {
       cancelled = true;
-      if (processesCacheSaveTimerRef.current) clearTimeout(processesCacheSaveTimerRef.current);
+      flushProcessesCache();
     };
-  }, [cacheNamespace]);
+  }, [cacheNamespace, flushProcessesCache]);
 
   useEffect(() => {
     const cacheKey = cacheNamespace ? `${PROCESSES_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
-    if (!cacheKey || !processesCacheLoadedRef.current) return;
+    if (!cacheKey || !processesCacheLoadedRef.current) {
+      if (!cacheKey) processesCacheSnapshotRef.current = null;
+      return;
+    }
 
     if (processesCacheSaveTimerRef.current) clearTimeout(processesCacheSaveTimerRef.current);
-    processesCacheSaveTimerRef.current = setTimeout(() => {
-      const cache: ProcessesPanelCache = {
+    processesCacheSnapshotRef.current = {
+      cacheKey,
+      cache: {
         processList,
         selectedProcess,
         processOutput,
         savedAt: Date.now(),
-      };
-      AsyncStorage.setItem(cacheKey, JSON.stringify(cache)).catch(() => {});
+      },
+    };
+    processesCacheSaveTimerRef.current = setTimeout(() => {
+      processesCacheSaveTimerRef.current = null;
+      flushProcessesCache();
     }, 400);
-  }, [cacheNamespace, processList, processOutput, selectedProcess]);
+  }, [cacheNamespace, flushProcessesCache, processList, processOutput, selectedProcess]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState !== 'active') {
+        flushProcessesCache();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+      flushProcessesCache();
+    };
+  }, [flushProcessesCache]);
 
   // Load on mount and when active
   useEffect(() => {
-    if (isActive && isConnected) {
-      loadProcesses();
-    }
-  }, [isActive, isConnected, loadProcesses]);
+    if (!isConnected || processesCacheReadyVersion === 0) return;
+    loadProcesses();
+  }, [isConnected, loadProcesses, processesCacheReadyVersion, syncGeneration]);
 
   // Auto-refresh every 5 seconds when active
   useEffect(() => {
-    if (!isActive || !isConnected) return;
+    if (!isActive || !isConnected || processesCacheReadyVersion === 0) return;
     const interval = setInterval(loadProcesses, 5000);
     return () => clearInterval(interval);
-  }, [isActive, isConnected, loadProcesses]);
+  }, [isActive, isConnected, loadProcesses, processesCacheReadyVersion]);
 
   // Load output when process selected
   useEffect(() => {
     if (selectedProcess) {
-      if (!isConnected) return;
+      if (!isConnected || processesCacheReadyVersion === 0) return;
       const requestId = processOutputRequestIdRef.current + 1;
       processOutputRequestIdRef.current = requestId;
       setOutputLoading(true);
-      processApi.getOutput(selectedProcess.channel)
+      getProcessOutput(selectedProcess.channel)
         .then(output => {
           if (processOutputRequestIdRef.current === requestId) setProcessOutput(output);
         })
@@ -186,13 +243,13 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
       processOutputRequestIdRef.current += 1;
       setProcessOutput('');
     }
-  }, [isConnected, processApi, selectedProcess]);
+  }, [getProcessOutput, isConnected, processesCacheReadyVersion, selectedProcess, syncGeneration]);
 
   const killProcess = async (pid: number) => {
     setProcessList(prev => prev.filter(p => p.pid !== pid));
     setSelectedProcess(null);
     try {
-      await processApi.kill(pid);
+      await killProcessByPid(pid);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Failed to kill process';
       setError(message);
@@ -206,7 +263,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
     setSpawning(true);
     try {
       const args = spawnArgs.trim() ? spawnArgs.split(' ') : undefined;
-      await processApi.spawn(spawnCommand.trim(), args, {
+      await spawnProcessWithCommand(spawnCommand.trim(), args, {
         cwd: spawnPath.trim() || undefined,
       });
       setShowSpawnForm(false);
@@ -229,7 +286,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
   const clearOutput = async () => {
     if (!selectedProcess) return;
     try {
-      await processApi.clearOutput(selectedProcess.channel);
+      await clearProcessOutputByChannel(selectedProcess.channel);
       setProcessOutput('');
     } catch {
       // Ignore errors
@@ -242,7 +299,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
     processOutputRequestIdRef.current = requestId;
     setOutputLoading(true);
     try {
-      const output = await processApi.getOutput(selectedProcess.channel);
+      const output = await getProcessOutput(selectedProcess.channel);
       if (processOutputRequestIdRef.current !== requestId) return;
       setProcessOutput(output);
     } catch {

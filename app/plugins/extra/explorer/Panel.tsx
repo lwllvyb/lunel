@@ -10,6 +10,7 @@ import {
   Modal,
   ActivityIndicator,
   Alert,
+  AppState,
   Platform,
   BackHandler,
   InteractionManager,
@@ -444,10 +445,19 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
   const { colors, fonts, spacing, radius, isDark } = useTheme();
   const headerHeight = useHeaderHeight();
 
-  const { status, capabilities, cacheNamespace } = useConnection();
+  const { status, capabilities, cacheNamespace, syncGeneration } = useConnection();
   const { fs } = useApi();
   const { openTab } = usePlugins();
   const isConnected = status === 'connected';
+  const createFileEntry = fs.create;
+  const grepFiles = fs.grep;
+  const listFiles = fs.list;
+  const makeDirectory = fs.mkdir;
+  const movePath = fs.move;
+  const readFile = fs.read;
+  const removePath = fs.remove;
+  const statPath = fs.stat;
+  const writeFile = fs.write;
 
   const [currentPath, setCurrentPath] = useState('.');
   const [items, setItems] = useState<FileEntry[]>([]);
@@ -504,8 +514,10 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
   const lastLocalSearchPathRef = useRef(currentPath);
   const explorerCacheLoadedRef = useRef(false);
   const explorerCacheSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const explorerCacheSnapshotRef = useRef<{ cacheKey: string; cache: ExplorerCache } | null>(null);
   const itemsRef = useRef<FileEntry[]>([]);
   const itemsPathRef = useRef('.');
+  const [explorerCacheReadyVersion, setExplorerCacheReadyVersion] = useState(0);
   const MAX_UPLOAD_SIZE_BYTES = 15 * 1024 * 1024;
 
   useEffect(() => {
@@ -516,24 +528,49 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
     itemsPathRef.current = itemsPath;
   }, [itemsPath]);
 
+  const flushExplorerCache = useCallback(() => {
+    if (explorerCacheSaveTimerRef.current) {
+      clearTimeout(explorerCacheSaveTimerRef.current);
+      explorerCacheSaveTimerRef.current = null;
+    }
+
+    const snapshot = explorerCacheSnapshotRef.current;
+    if (!snapshot) return;
+    AsyncStorage.setItem(snapshot.cacheKey, JSON.stringify(snapshot.cache)).catch(() => {});
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     const cacheKey = cacheNamespace ? `${EXPLORER_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
     explorerCacheLoadedRef.current = false;
-    setCurrentPath('.');
-    setItems([]);
-    setItemsPath('.');
-    setDirectoryItemCounts({});
+    explorerCacheSnapshotRef.current = null;
+    setExplorerCacheReadyVersion(0);
 
     const loadExplorerCache = async () => {
       if (!cacheKey) {
+        setCurrentPath('.');
+        setItems([]);
+        setItemsPath('.');
+        setDirectoryItemCounts({});
+        itemsRef.current = [];
+        itemsPathRef.current = '.';
         explorerCacheLoadedRef.current = true;
+        setExplorerCacheReadyVersion((current) => current + 1);
         return;
       }
 
       try {
         const raw = await AsyncStorage.getItem(cacheKey);
-        if (!raw || cancelled) return;
+        if (cancelled) return;
+        if (!raw) {
+          setCurrentPath('.');
+          setItems([]);
+          setItemsPath('.');
+          setDirectoryItemCounts({});
+          itemsRef.current = [];
+          itemsPathRef.current = '.';
+          return;
+        }
 
         const parsed = JSON.parse(raw) as Partial<ExplorerCache>;
         const cachedPath = typeof parsed.currentPath === 'string' && parsed.currentPath
@@ -548,10 +585,23 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
         setItems(cachedItems);
         setItemsPath(cachedPath);
         setDirectoryItemCounts(cachedCounts);
+        itemsRef.current = cachedItems;
+        itemsPathRef.current = cachedPath;
       } catch {
+        if (!cancelled) {
+          setCurrentPath('.');
+          setItems([]);
+          setItemsPath('.');
+          setDirectoryItemCounts({});
+          itemsRef.current = [];
+          itemsPathRef.current = '.';
+        }
         // Cached explorer state should never block opening the panel.
       } finally {
-        explorerCacheLoadedRef.current = true;
+        if (!cancelled) {
+          explorerCacheLoadedRef.current = true;
+          setExplorerCacheReadyVersion((current) => current + 1);
+        }
       }
     };
 
@@ -559,37 +609,54 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
 
     return () => {
       cancelled = true;
-      if (explorerCacheSaveTimerRef.current) {
-        clearTimeout(explorerCacheSaveTimerRef.current);
-        explorerCacheSaveTimerRef.current = null;
-      }
+      flushExplorerCache();
     };
-  }, [cacheNamespace]);
+  }, [cacheNamespace, flushExplorerCache]);
 
   useEffect(() => {
     const cacheKey = cacheNamespace ? `${EXPLORER_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
-    if (!cacheKey || !explorerCacheLoadedRef.current || itemsPath !== currentPath || loading) return;
+    if (!cacheKey || !explorerCacheLoadedRef.current || itemsPath !== currentPath || loading) {
+      if (!cacheKey) explorerCacheSnapshotRef.current = null;
+      return;
+    }
     if (explorerCacheSaveTimerRef.current) {
       clearTimeout(explorerCacheSaveTimerRef.current);
     }
 
-    explorerCacheSaveTimerRef.current = setTimeout(() => {
-      explorerCacheSaveTimerRef.current = null;
-      const cache: ExplorerCache = {
+    explorerCacheSnapshotRef.current = {
+      cacheKey,
+      cache: {
         currentPath,
         items,
         directoryItemCounts,
         savedAt: Date.now(),
-      };
-      AsyncStorage.setItem(cacheKey, JSON.stringify(cache)).catch(() => {});
+      },
+    };
+
+    explorerCacheSaveTimerRef.current = setTimeout(() => {
+      explorerCacheSaveTimerRef.current = null;
+      flushExplorerCache();
     }, 400);
-  }, [cacheNamespace, currentPath, directoryItemCounts, items, itemsPath, loading]);
+  }, [cacheNamespace, currentPath, directoryItemCounts, flushExplorerCache, items, itemsPath, loading]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState !== 'active') {
+        flushExplorerCache();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+      flushExplorerCache();
+    };
+  }, [flushExplorerCache]);
 
   const openWithSystem = async (item: FileEntry, pathOverride?: string) => {
     const filePath = pathOverride ?? (currentPath === '.' ? item.name : `${currentPath}/${item.name}`);
 
     try {
-      const result = await fs.read(filePath);
+      const result = await readFile(filePath);
       if (result.encoding !== 'base64') {
         Alert.alert('Not binary', 'This file can be opened in the editor.');
         return;
@@ -647,7 +714,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
     setLoading(!hasVisibleCache);
     setError(null);
     try {
-      const entries = await fs.list(path);
+      const entries = await listFiles(path);
       if (directoryLoadRequestIdRef.current !== requestId) return;
       setItems(entries);
       setItemsPath(path);
@@ -664,21 +731,13 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
       setLoading(false);
       innerApi.refreshBottomBar();
     }
-  }, [isConnected, fs]);
+  }, [isConnected, listFiles]);
 
   // Load on mount and when path changes
   useEffect(() => {
-    if (isConnected) {
-      loadDirectory(currentPath);
-    }
-  }, [currentPath, isConnected, loadDirectory]);
-
-  // Refresh when panel becomes active
-  useEffect(() => {
-    if (isActive && isConnected) {
-      loadDirectory(currentPath);
-    }
-  }, [isActive, isConnected]);
+    if (!isConnected || explorerCacheReadyVersion === 0) return;
+    loadDirectory(currentPath);
+  }, [currentPath, explorerCacheReadyVersion, isConnected, loadDirectory, syncGeneration]);
 
   useEffect(() => {
     requestAnimationFrame(() => {
@@ -796,7 +855,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
     void Promise.all(
       directoryPaths.map(async (path) => {
         try {
-          const entries = await fs.list(path);
+          const entries = await listFiles(path);
           return { path, count: entries.length };
         } catch {
           return { path, count: 0 };
@@ -812,7 +871,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
         return next;
       });
     });
-  }, [currentItems, currentPath, fs, isConnected]);
+  }, [currentItems, currentPath, isConnected, listFiles]);
 
   const runCodebaseSearch = useCallback(async (opts?: { caseSensitive?: boolean }) => {
     if (!isConnected || searchMode !== 'codebase') return;
@@ -834,7 +893,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
     setHasCodebaseSearched(true);
 
     try {
-      const matches = await fs.grep(query, grepPath, {
+      const matches = await grepFiles(query, grepPath, {
         caseSensitive,
         maxResults: 300,
       });
@@ -850,7 +909,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
         setCodebaseSearchLoading(false);
       }
     }
-  }, [codebaseCaseSensitive, codebasePath, fs, isConnected, searchMode, searchQuery]);
+  }, [codebaseCaseSensitive, codebasePath, grepFiles, isConnected, searchMode, searchQuery]);
 
   const runRepoFileSearch = useCallback(async (searchFromRootOverride?: boolean) => {
     if (!isConnected || searchMode !== 'files') return;
@@ -892,7 +951,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
 
         let entries: FileEntry[];
         try {
-          entries = await fs.list(dir);
+          entries = await listFiles(dir);
         } catch {
           continue;
         }
@@ -943,7 +1002,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
           return item;
         }
         try {
-          const stat = await fs.stat(item.path);
+          const stat = await statPath(item.path);
           return {
             ...item,
             size: item.size ?? stat.size,
@@ -968,11 +1027,12 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
   }, [
     currentPath,
     filterBy,
-    fs,
     isConnected,
+    listFiles,
     searchMode,
     searchFromRoot,
     searchQuery,
+    statPath,
     showHiddenFiles,
   ]);
 
@@ -1123,8 +1183,8 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
   }, [currentPath, selectedItem, selectedItemPathOverride]);
 
   const copyDirectoryRecursive = useCallback(async (sourcePath: string, targetPath: string): Promise<void> => {
-    await fs.mkdir(targetPath, true);
-    const entries = await fs.list(sourcePath);
+    await makeDirectory(targetPath, true);
+    const entries = await listFiles(sourcePath);
 
     for (const entry of entries) {
       const from = `${sourcePath}/${entry.name}`;
@@ -1133,26 +1193,26 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
       if (entry.type === 'directory') {
         await copyDirectoryRecursive(from, to);
       } else {
-        const content = await fs.read(from);
-        await fs.write(to, content.content, content.encoding, 120000, { source: 'explorer-copy' });
+        const content = await readFile(from);
+        await writeFile(to, content.content, content.encoding, 120000, { source: 'explorer-copy' });
       }
     }
-  }, [fs]);
+  }, [listFiles, makeDirectory, readFile, writeFile]);
 
   const handlePasteCopiedFile = useCallback(async () => {
     if (!copiedFile) return;
     try {
-      const sourceContent = await fs.read(copiedFile.path);
+      const sourceContent = await readFile(copiedFile.path);
       const targetPath = currentPath === '.' ? copiedFile.name : `${currentPath}/${copiedFile.name}`;
 
-      await fs.write(targetPath, sourceContent.content, sourceContent.encoding, 120000, { source: 'explorer-copy' });
+      await writeFile(targetPath, sourceContent.content, sourceContent.encoding, 120000, { source: 'explorer-copy' });
       await loadDirectory(currentPath);
       Alert.alert('Pasted', `"${copiedFile.name}" was pasted into ${currentPath === '.' ? 'the current folder' : currentPath}.`);
     } catch (err) {
       const apiError = err as ApiError;
       Alert.alert('Paste failed', apiError.message || 'Failed to paste file');
     }
-  }, [copiedFile, currentPath, fs, loadDirectory]);
+  }, [copiedFile, currentPath, loadDirectory, readFile, writeFile]);
 
   const handlePasteCopiedFolder = useCallback(async () => {
     if (!copiedFolder) return;
@@ -1183,7 +1243,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
         return;
       }
 
-      await fs.move(movedFile.path, targetPath);
+      await movePath(movedFile.path, targetPath);
       setMovedFile(null);
       await loadDirectory(currentPath);
       Alert.alert('Moved', `"${movedFile.name}" was moved to ${currentPath === '.' ? 'the current folder' : currentPath}.`);
@@ -1191,7 +1251,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
       const apiError = err as ApiError;
       Alert.alert('Move failed', apiError.message || 'Failed to move file');
     }
-  }, [currentPath, fs, loadDirectory, movedFile]);
+  }, [currentPath, loadDirectory, movedFile, movePath]);
 
   const handlePasteMovedFolder = useCallback(async () => {
     if (!movedFolder) return;
@@ -1207,7 +1267,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
         return;
       }
 
-      await fs.move(movedFolder.path, targetPath);
+      await movePath(movedFolder.path, targetPath);
       setMovedFolder(null);
       await loadDirectory(currentPath);
       Alert.alert('Moved', `"${movedFolder.name}" was moved to ${currentPath === '.' ? 'the current folder' : currentPath}.`);
@@ -1215,7 +1275,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
       const apiError = err as ApiError;
       Alert.alert('Move failed', apiError.message || 'Failed to move folder');
     }
-  }, [currentPath, fs, loadDirectory, movedFolder]);
+  }, [currentPath, loadDirectory, movedFolder, movePath]);
 
   // Detect binary/text for selected file to render the correct primary action.
   useEffect(() => {
@@ -1225,7 +1285,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
     const detectEncoding = async () => {
       const filePath = selectedItemPathOverride ?? (currentPath === '.' ? selectedItem.name : `${currentPath}/${selectedItem.name}`);
       try {
-        const stat = await fs.stat(filePath);
+        const stat = await statPath(filePath);
         if (cancelled) return;
         setSelectedItemIsBinary(!!stat.isBinary);
       } catch {
@@ -1239,7 +1299,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [selectedItem, selectedItemPathOverride, currentPath, fs]);
+  }, [selectedItem, selectedItemPathOverride, currentPath, statPath]);
 
   useEffect(() => {
     if (!selectedItem || selectedItem.type !== 'directory') {
@@ -1251,7 +1311,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
     const selectedPath = selectedItemPathOverride ?? (currentPath === '.' ? selectedItem.name : `${currentPath}/${selectedItem.name}`);
     setSelectedDirectoryItemCount(null);
 
-    void fs.list(selectedPath)
+    void listFiles(selectedPath)
       .then((entries) => {
         if (!cancelled) {
           setSelectedDirectoryItemCount(entries.length);
@@ -1266,14 +1326,14 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [currentPath, fs, selectedItem, selectedItemPathOverride]);
+  }, [currentPath, listFiles, selectedItem, selectedItemPathOverride]);
 
   const handleCreateSubmit = async (value: string, type: 'file' | 'directory') => {
     const name = value.trim();
     if (!name) return;
     const path = currentPath === '.' ? name : `${currentPath}/${name}`;
     try {
-      await fs.create(path, type);
+      await createFileEntry(path, type);
       loadDirectory(currentPath);
     } catch (err) {
       const apiError = err as ApiError;
@@ -1311,7 +1371,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
           style: 'destructive',
           onPress: async () => {
             try {
-              await fs.remove(path, true);
+              await removePath(path, true);
               await gPI.editor.notifyFileDeleted(path);
               closeModal();
               loadDirectory(currentPath);
@@ -1338,7 +1398,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
     const dirPart = fromPath.includes('/') ? fromPath.substring(0, fromPath.lastIndexOf('/')) : '.';
     const to = dirPart === '.' ? nextName : `${dirPart}/${nextName}`;
     try {
-      await fs.move(fromPath, to);
+      await movePath(fromPath, to);
       await gPI.editor.notifyFileRenamed(fromPath, to);
       loadDirectory(currentPath);
     } catch (err) {
@@ -1445,7 +1505,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
       }
       setUploadStage('writing');
       setUploadStatusText(`Uploading ${fileName} to ${currentPath === '.' ? 'the current folder' : currentPath}...`);
-      await fs.write(targetPath, base64, 'base64', 120000);
+      await writeFile(targetPath, base64, 'base64', 120000);
       if (uploadCancelRequestedRef.current) {
         return;
       }
@@ -1595,7 +1655,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
   }, [capabilities?.rootDir]);
 
   // Not connected state
-  if (!isConnected) {
+  if (!isConnected && items.length === 0) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg.base, justifyContent: 'center', alignItems: 'center' }}>
         <CloudOff size={48} color={colors.fg.muted} />

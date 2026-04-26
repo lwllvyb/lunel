@@ -16,6 +16,7 @@ import { ChevronDown, ChevronUp, File, Folder, Keyboard as KeyboardIcon, Save, S
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  AppState,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -308,13 +309,16 @@ function createEditorHtml({
 </html>`;
 }
 
-export default function EditorPanel({ isActive, bottomBarHeight: _bottomBarHeight }: PluginPanelProps) {
+export default function EditorPanel({ isActive: _isActive, bottomBarHeight: _bottomBarHeight }: PluginPanelProps) {
   const { colors, fonts, fontSelection, isDark } = useTheme();
-  const { fireData, onDataEvent, status, cacheNamespace } = useConnection();
+  const { fireData, onDataEvent, status, cacheNamespace, syncGeneration } = useConnection();
   const { openTab, setDrawerContentVariant } = usePlugins();
   const { config } = useEditorConfig();
   const { showEditorReviewButton, requestEditorReview } = useReviewPrompt();
   const { fs } = useApi();
+  const readFile = fs.read;
+  const statPath = fs.stat;
+  const writeFile = fs.write;
   const { register, unregister } = useSessionRegistryActions();
   const navigation = useNavigation();
   const extendedColors = colors as typeof colors & {
@@ -342,7 +346,9 @@ export default function EditorPanel({ isActive, bottomBarHeight: _bottomBarHeigh
   const webViewContentRef = useRef<Record<string, string>>({});
   const editorCacheLoadedRef = useRef(false);
   const editorCacheSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editorCacheSnapshotRef = useRef<{ cacheKey: string; cache: EditorPanelCache } | null>(null);
   const keyboardHeightSV = useSharedValue(0);
+  const [editorCacheReadyVersion, setEditorCacheReadyVersion] = useState(0);
 
   useKeyboardHandler(
     {
@@ -374,16 +380,30 @@ export default function EditorPanel({ isActive, bottomBarHeight: _bottomBarHeigh
     tabsRef.current = tabs;
   }, [tabs]);
 
+  const flushEditorCache = useCallback(() => {
+    if (editorCacheSaveTimerRef.current) {
+      clearTimeout(editorCacheSaveTimerRef.current);
+      editorCacheSaveTimerRef.current = null;
+    }
+
+    const snapshot = editorCacheSnapshotRef.current;
+    if (!snapshot) return;
+    AsyncStorage.setItem(snapshot.cacheKey, JSON.stringify(snapshot.cache)).catch(() => {});
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     const cacheKey = cacheNamespace ? `${EDITOR_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
     editorCacheLoadedRef.current = false;
-    webViewContentRef.current = {};
-    setTabs([]);
-    setActiveTabId(null);
+    editorCacheSnapshotRef.current = null;
+    setEditorCacheReadyVersion(0);
 
     if (!cacheKey) {
+      webViewContentRef.current = {};
+      setTabs([]);
+      setActiveTabId(null);
       editorCacheLoadedRef.current = true;
+      setEditorCacheReadyVersion((current) => current + 1);
       return () => {
         cancelled = true;
       };
@@ -391,7 +411,13 @@ export default function EditorPanel({ isActive, bottomBarHeight: _bottomBarHeigh
 
     AsyncStorage.getItem(cacheKey)
       .then((raw) => {
-        if (cancelled || !raw) return;
+        if (cancelled) return;
+        if (!raw) {
+          webViewContentRef.current = {};
+          setTabs([]);
+          setActiveTabId(null);
+          return;
+        }
         const parsed = JSON.parse(raw) as Partial<EditorPanelCache>;
         const cachedTabs = Array.isArray(parsed.tabs) ? parsed.tabs : [];
         const contentByTab = parsed.contentByTab && typeof parsed.contentByTab === "object" ? parsed.contentByTab : {};
@@ -411,24 +437,36 @@ export default function EditorPanel({ isActive, bottomBarHeight: _bottomBarHeigh
             : safeTabs[0]?.id ?? null
         );
       })
-      .catch(() => {})
+      .catch(() => {
+        if (cancelled) return;
+        webViewContentRef.current = {};
+        setTabs([]);
+        setActiveTabId(null);
+      })
       .finally(() => {
-        if (!cancelled) editorCacheLoadedRef.current = true;
+        if (!cancelled) {
+          editorCacheLoadedRef.current = true;
+          setEditorCacheReadyVersion((current) => current + 1);
+        }
       });
 
-  return () => {
+    return () => {
       cancelled = true;
-      if (editorCacheSaveTimerRef.current) clearTimeout(editorCacheSaveTimerRef.current);
+      flushEditorCache();
     };
-  }, [cacheNamespace]);
+  }, [cacheNamespace, flushEditorCache]);
 
   useEffect(() => {
     const cacheKey = cacheNamespace ? `${EDITOR_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
-    if (!cacheKey || !editorCacheLoadedRef.current) return;
+    if (!cacheKey || !editorCacheLoadedRef.current) {
+      if (!cacheKey) editorCacheSnapshotRef.current = null;
+      return;
+    }
 
     if (editorCacheSaveTimerRef.current) clearTimeout(editorCacheSaveTimerRef.current);
-    editorCacheSaveTimerRef.current = setTimeout(() => {
-      const cache: EditorPanelCache = {
+    editorCacheSnapshotRef.current = {
+      cacheKey,
+      cache: {
         tabs: tabs.map((tab) => ({
           ...tab,
           isSaving: false,
@@ -437,10 +475,26 @@ export default function EditorPanel({ isActive, bottomBarHeight: _bottomBarHeigh
         activeTabId,
         contentByTab: webViewContentRef.current,
         savedAt: Date.now(),
-      };
-      AsyncStorage.setItem(cacheKey, JSON.stringify(cache)).catch(() => {});
+      },
+    };
+    editorCacheSaveTimerRef.current = setTimeout(() => {
+      editorCacheSaveTimerRef.current = null;
+      flushEditorCache();
     }, 500);
-  }, [activeTabId, cacheNamespace, tabs]);
+  }, [activeTabId, cacheNamespace, flushEditorCache, tabs]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState !== "active") {
+        flushEditorCache();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+      flushEditorCache();
+    };
+  }, [flushEditorCache]);
 
   const clearSaveTimer = useCallback((tabId: string) => {
     const existing = saveTimeoutsRef.current[tabId];
@@ -492,7 +546,7 @@ export default function EditorPanel({ isActive, bottomBarHeight: _bottomBarHeigh
     );
 
     try {
-      await fs.write(targetTab.path, snapshot, "utf8", undefined, { source: "editor" });
+      await writeFile(targetTab.path, snapshot, "utf8", undefined, { source: "editor" });
       setTabs((prev) =>
         prev.map((tab) => {
           if (tab.id !== tabId) {
@@ -519,7 +573,7 @@ export default function EditorPanel({ isActive, bottomBarHeight: _bottomBarHeigh
         )
       );
     }
-  }, [fs]);
+  }, [writeFile]);
 
   const scheduleSave = useCallback((tabId: string) => {
     clearSaveTimer(tabId);
@@ -600,7 +654,7 @@ export default function EditorPanel({ isActive, bottomBarHeight: _bottomBarHeigh
     setActiveTabId(tabId);
 
     try {
-      const stat = await fs.stat(filePath);
+      const stat = await statPath(filePath);
       if (stat.type !== "file") {
         throw new Error("Only files can be opened in the editor");
       }
@@ -608,7 +662,7 @@ export default function EditorPanel({ isActive, bottomBarHeight: _bottomBarHeigh
         throw new Error("Binary files cannot be opened in the editor");
       }
 
-      const result = await fs.read(filePath);
+      const result = await readFile(filePath);
       if (result.encoding !== "utf8") {
         throw new Error("Binary files cannot be opened in the editor");
       }
@@ -634,7 +688,7 @@ export default function EditorPanel({ isActive, bottomBarHeight: _bottomBarHeigh
       setActiveTabId((currentActiveTabId) => (currentActiveTabId === tabId ? null : currentActiveTabId));
       throw new Error(message);
     }
-  }, [fireData, fs]);
+  }, [fireData, readFile, statPath]);
 
   const insertText = useCallback(async (text: string) => {
     const activeTab = tabsRef.current.find((tab) => tab.id === activeTabId);
@@ -686,7 +740,7 @@ export default function EditorPanel({ isActive, bottomBarHeight: _bottomBarHeigh
 
   const reloadTabFromDisk = useCallback(async (tabId: string, filePath: string) => {
     logger.info("editor-sync", "reloading tab from disk", { tabId, path: filePath });
-    const result = await fs.read(filePath);
+    const result = await readFile(filePath);
     if (result.encoding !== "utf8") {
       throw new Error("Binary files cannot be opened in the editor");
     }
@@ -718,10 +772,10 @@ export default function EditorPanel({ isActive, bottomBarHeight: _bottomBarHeigh
         true;
       `);
     }
-  }, [activeTabId, config.wrapLines, fs]);
+  }, [activeTabId, config.wrapLines, readFile]);
 
   useEffect(() => {
-    if (!isActive || status !== "connected") return;
+    if (status !== "connected" || editorCacheReadyVersion === 0) return;
 
     let cancelled = false;
 
@@ -746,7 +800,7 @@ export default function EditorPanel({ isActive, bottomBarHeight: _bottomBarHeigh
     return () => {
       cancelled = true;
     };
-  }, [isActive, reloadTabFromDisk, status]);
+  }, [editorCacheReadyVersion, reloadTabFromDisk, status, syncGeneration]);
 
   const controller = useMemo(() => ({
     openFile,

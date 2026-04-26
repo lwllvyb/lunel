@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useConnection, Message } from '../contexts/ConnectionContext';
 import type { AiBackend, AIEvent, AISession, AIMessage, AIAgent, AIProvider, ModelRef, PermissionResponse, AIFileAttachment, CodexPromptOptions, AISyncState } from '../plugins/core/ai/types';
 
@@ -31,7 +31,11 @@ export function useAI(events?: AIEvents) {
   // Available backends
   const getBackends = useCallback(async (): Promise<AiBackend[]> => {
     const response = await sendControl('ai', 'backends');
-    if (!response.ok) throw new Error(response.error?.message || 'Failed to get backends');
+    if (!response.ok) {
+      const error = new Error(response.error?.message || 'Failed to get backends') as Error & { code?: string };
+      error.code = response.error?.code;
+      throw error;
+    }
     return response.payload.backends as AiBackend[];
   }, [sendControl]);
 
@@ -45,13 +49,21 @@ export function useAI(events?: AIEvents) {
   const listSessions = useCallback(async (): Promise<AISession[]> => {
     // Use data channel — session lists can exceed the 64KB control channel limit
     const response = await sendData('ai', 'listSessions');
-    if (!response.ok) throw new Error(response.error?.message || 'Failed to list sessions');
+    if (!response.ok) {
+      const error = new Error(response.error?.message || 'Failed to list sessions') as Error & { code?: string };
+      error.code = response.error?.code;
+      throw error;
+    }
     return response.payload.sessions as AISession[];
   }, [sendData]);
 
   const syncState = useCallback(async (sessionIds?: Partial<Record<AiBackend, string[]>>): Promise<AISyncState> => {
     const response = await sendData('ai', 'syncState', { sessionIds: sessionIds ?? {} });
-    if (!response.ok) throw new Error(response.error?.message || 'Failed to sync AI state');
+    if (!response.ok) {
+      const error = new Error(response.error?.message || 'Failed to sync AI state') as Error & { code?: string };
+      error.code = response.error?.code;
+      throw error;
+    }
     return response.payload as unknown as AISyncState;
   }, [sendData]);
 
@@ -159,7 +171,7 @@ export function useAI(events?: AIEvents) {
     if (!res.ok) throw new Error(res.error?.message || 'Failed to reject question');
   }, [sendControl]);
 
-  return {
+  return useMemo(() => ({
     isConnected,
     getBackends,
     createSession,
@@ -181,5 +193,27 @@ export function useAI(events?: AIEvents) {
     replyPermission,
     replyQuestion,
     rejectQuestion,
-  };
+  }), [
+    isConnected,
+    getBackends,
+    createSession,
+    listSessions,
+    syncState,
+    getSession,
+    deleteSession,
+    renameSession,
+    getMessages,
+    sendPrompt,
+    abort,
+    getAgents,
+    getProviders,
+    setAuth,
+    runCommand,
+    revert,
+    unrevert,
+    share,
+    replyPermission,
+    replyQuestion,
+    rejectQuestion,
+  ]);
 }

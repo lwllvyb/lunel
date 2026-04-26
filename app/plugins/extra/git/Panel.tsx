@@ -10,6 +10,7 @@ import {
   View,
   Modal,
   Alert,
+  AppState,
   ActionSheetIOS,
   Keyboard,
   Platform,
@@ -176,12 +177,18 @@ const GitFileIcon = memo(function GitFileIcon({
   return <File size={15} color={colors.fg.muted} strokeWidth={2} />;
 });
 
-function GitPanel({ instanceId, isActive }: PluginPanelProps) {
+function GitPanel({ instanceId: _instanceId, isActive: _isActive }: PluginPanelProps) {
   const { colors, fonts, spacing, radius } = useTheme();
   const headerHeight = useHeaderHeight();
-  const { status: connStatus, cacheNamespace } = useConnection();
+  const { status: connStatus, cacheNamespace, syncGeneration } = useConnection();
   const { git, fs } = useApi();
   const isConnected = connStatus === 'connected';
+  const getGitStatus = git.status;
+  const getGitLog = git.log;
+  const getGitBranches = git.branches;
+  const getGitCommitDetails = git.commitDetails;
+  const getGitDiff = git.diff;
+  const readFile = fs.read;
 
   const [activeTab, setActiveTab] = useState<Tab>('changes');
   const [loading, setLoading] = useState(false);
@@ -226,12 +233,14 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
   const [historyLoading, setHistoryLoading] = useState(false);
   const gitCacheLoadedRef = useRef(false);
   const gitCacheSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gitCacheSnapshotRef = useRef<{ cacheKey: string; cache: GitPanelCache } | null>(null);
   const hasGitSnapshotRef = useRef(false);
   const gitStatusRequestIdRef = useRef(0);
   const gitCommitsRequestIdRef = useRef(0);
   const gitBranchesRequestIdRef = useRef(0);
   const commitDetailsRequestIdRef = useRef(0);
   const changeDiffRequestIdRef = useRef(0);
+  const [gitCacheReadyVersion, setGitCacheReadyVersion] = useState(0);
 
   const dismissGitInputs = useCallback(() => {
     TextInput.State.currentlyFocusedInput?.()?.blur?.();
@@ -243,7 +252,7 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
     const requestId = gitStatusRequestIdRef.current + 1;
     gitStatusRequestIdRef.current = requestId;
     try {
-      const status = await git.status();
+      const status = await getGitStatus();
       if (gitStatusRequestIdRef.current !== requestId) return;
       setGitStatus(status);
       setError(null);
@@ -252,18 +261,18 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
       const apiError = err as ApiError;
       setError(apiError.code === 'ENOTGIT' ? 'Not a git repository' : (apiError.message || 'Failed to load status'));
     }
-  }, [isConnected, git]);
+  }, [getGitStatus, isConnected]);
 
   const loadCommits = useCallback(async (limit?: number) => {
     if (!isConnected) return;
     const requestId = gitCommitsRequestIdRef.current + 1;
     gitCommitsRequestIdRef.current = requestId;
     try {
-      const log = await git.log(limit ?? commitLimitRef.current);
+      const log = await getGitLog(limit ?? commitLimitRef.current);
       if (gitCommitsRequestIdRef.current !== requestId) return;
       setCommits(log);
     } catch { /* silent */ }
-  }, [isConnected, git]);
+  }, [getGitLog, isConnected]);
 
   const handleLoadMore = useCallback(async () => {
     const nextLimit = commitLimitRef.current + 50;
@@ -273,23 +282,23 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
     try {
       const requestId = gitCommitsRequestIdRef.current + 1;
       gitCommitsRequestIdRef.current = requestId;
-      const log = await git.log(nextLimit);
+      const log = await getGitLog(nextLimit);
       if (gitCommitsRequestIdRef.current !== requestId) return;
       setCommits(log);
     } catch { /* silent */ }
     setLoadingMore(false);
-  }, [git]);
+  }, [getGitLog]);
 
   const loadBranches = useCallback(async () => {
     if (!isConnected) return;
     const requestId = gitBranchesRequestIdRef.current + 1;
     gitBranchesRequestIdRef.current = requestId;
     try {
-      const data = await git.branches();
+      const data = await getGitBranches();
       if (gitBranchesRequestIdRef.current !== requestId) return;
       setBranches(data);
     } catch { /* silent */ }
-  }, [isConnected, git]);
+  }, [getGitBranches, isConnected]);
 
   const loadAll = useCallback(async () => {
     setLoading(!hasGitSnapshotRef.current);
@@ -297,20 +306,34 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
     setLoading(false);
   }, [loadStatus, loadCommits, loadBranches]);
 
+  const flushGitCache = useCallback(() => {
+    if (gitCacheSaveTimerRef.current) {
+      clearTimeout(gitCacheSaveTimerRef.current);
+      gitCacheSaveTimerRef.current = null;
+    }
+
+    const snapshot = gitCacheSnapshotRef.current;
+    if (!snapshot) return;
+    AsyncStorage.setItem(snapshot.cacheKey, JSON.stringify(snapshot.cache)).catch(() => {});
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     const cacheKey = cacheNamespace ? `${GIT_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
     gitCacheLoadedRef.current = false;
-    setActiveTab('changes');
-    setGitStatus(null);
-    setCommits([]);
-    setBranches(null);
-    setCommitLimit(50);
-    commitLimitRef.current = 50;
-    hasGitSnapshotRef.current = false;
+    gitCacheSnapshotRef.current = null;
+    setGitCacheReadyVersion(0);
 
     if (!cacheKey) {
+      setActiveTab('changes');
+      setGitStatus(null);
+      setCommits([]);
+      setBranches(null);
+      setCommitLimit(50);
+      commitLimitRef.current = 50;
+      hasGitSnapshotRef.current = false;
       gitCacheLoadedRef.current = true;
+      setGitCacheReadyVersion((current) => current + 1);
       return () => {
         cancelled = true;
       };
@@ -318,7 +341,17 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
 
     AsyncStorage.getItem(cacheKey)
       .then((raw) => {
-        if (cancelled || !raw) return;
+        if (cancelled) return;
+        if (!raw) {
+          setActiveTab('changes');
+          setGitStatus(null);
+          setCommits([]);
+          setBranches(null);
+          setCommitLimit(50);
+          commitLimitRef.current = 50;
+          hasGitSnapshotRef.current = false;
+          return;
+        }
         const parsed = JSON.parse(raw) as Partial<GitPanelCache>;
         const cachedLimit = typeof parsed.commitLimit === 'number' ? parsed.commitLimit : 50;
         const cachedCommits = Array.isArray(parsed.commits) ? parsed.commits : [];
@@ -334,39 +367,72 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
         hasGitSnapshotRef.current = !!parsed.gitStatus || cachedCommits.length > 0 || !!parsed.branches;
         if (hasGitSnapshotRef.current) setLoading(false);
       })
-      .catch(() => {})
+      .catch(() => {
+        if (cancelled) return;
+        setActiveTab('changes');
+        setGitStatus(null);
+        setCommits([]);
+        setBranches(null);
+        setCommitLimit(50);
+        commitLimitRef.current = 50;
+        hasGitSnapshotRef.current = false;
+      })
       .finally(() => {
-        if (!cancelled) gitCacheLoadedRef.current = true;
+        if (!cancelled) {
+          gitCacheLoadedRef.current = true;
+          setGitCacheReadyVersion((current) => current + 1);
+        }
       });
 
     return () => {
       cancelled = true;
-      if (gitCacheSaveTimerRef.current) clearTimeout(gitCacheSaveTimerRef.current);
+      flushGitCache();
     };
-  }, [cacheNamespace]);
+  }, [cacheNamespace, flushGitCache]);
 
   useEffect(() => {
     const cacheKey = cacheNamespace ? `${GIT_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
     hasGitSnapshotRef.current = !!gitStatus || commits.length > 0 || !!branches;
-    if (!cacheKey || !gitCacheLoadedRef.current) return;
+    if (!cacheKey || !gitCacheLoadedRef.current) {
+      if (!cacheKey) gitCacheSnapshotRef.current = null;
+      return;
+    }
 
     if (gitCacheSaveTimerRef.current) clearTimeout(gitCacheSaveTimerRef.current);
-    gitCacheSaveTimerRef.current = setTimeout(() => {
-      const cache: GitPanelCache = {
+    gitCacheSnapshotRef.current = {
+      cacheKey,
+      cache: {
         activeTab,
         gitStatus,
         commits,
         branches,
         commitLimit,
         savedAt: Date.now(),
-      };
-      AsyncStorage.setItem(cacheKey, JSON.stringify(cache)).catch(() => {});
+      },
+    };
+    gitCacheSaveTimerRef.current = setTimeout(() => {
+      gitCacheSaveTimerRef.current = null;
+      flushGitCache();
     }, 500);
-  }, [activeTab, branches, cacheNamespace, commitLimit, commits, gitStatus]);
+  }, [activeTab, branches, cacheNamespace, commitLimit, commits, flushGitCache, gitStatus]);
 
   useEffect(() => {
-    if (isConnected && isActive) loadAll();
-  }, [isConnected, isActive, loadAll]);
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState !== 'active') {
+        flushGitCache();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+      flushGitCache();
+    };
+  }, [flushGitCache]);
+
+  useEffect(() => {
+    if (!isConnected || gitCacheReadyVersion === 0) return;
+    loadAll();
+  }, [gitCacheReadyVersion, isConnected, loadAll, syncGeneration]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -621,7 +687,7 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
     setCommitDetailsLoading(true);
     setLoadingCommitHash(hash);
     try {
-      const details = await git.commitDetails(hash);
+      const details = await getGitCommitDetails(hash);
       if (commitDetailsRequestIdRef.current !== requestId) return;
       setSelectedCommitDetails(details);
       setSelectedCommitFile(details.files[0]?.path || null);
@@ -645,11 +711,11 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
     setSelectedChangeContent(null);
     setShowFileDiffModal(true);
     try {
-      const diff = await git.diff(path, staged);
+      const diff = await getGitDiff(path, staged);
       if (changeDiffRequestIdRef.current !== requestId) return;
       setSelectedChangeDiff(diff);
       if (!staged && status === 'U' && !diff.trim()) {
-        const file = await fs.read(path);
+        const file = await readFile(path);
         if (changeDiffRequestIdRef.current !== requestId) return;
         if (file.encoding === 'utf8') {
           setSelectedChangeContent(file.content);
@@ -664,7 +730,7 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
       if (changeDiffRequestIdRef.current !== requestId) return;
       setChangeDiffLoading(false);
     }
-  }, [fs, git]);
+  }, [getGitDiff, readFile]);
 
   const handleDiscard = async (paths?: string[]) => {
     Alert.alert(
@@ -735,9 +801,10 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
   const totalChanges = gitStatus
     ? gitStatus.staged.length + gitStatus.unstaged.length + gitStatus.untracked.length
     : 0;
+  const hasGitSnapshot = !!gitStatus || commits.length > 0 || !!branches;
 
   // ── Not connected ──────────────────────────────────────────────
-  if (!isConnected) {
+  if (!isConnected && !hasGitSnapshot) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg.base }}>
         <Header title="Git" colors={colors} />

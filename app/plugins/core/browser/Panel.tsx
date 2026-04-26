@@ -10,6 +10,7 @@ import { X, ArrowLeft, ArrowRight, RotateCw, Search, Globe, Plus, Maximize2, Min
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  AppState,
   InputAccessoryView,
   InteractionManager,
   Platform,
@@ -222,7 +223,7 @@ const DEVSOLE_STUBS: Record<
 
 export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
   const { colors, radius, fonts, isDark } = useTheme();
-  const { discoveredProxyPorts, trackedProxyPorts, refreshProxyState, trackProxyPort, untrackProxyPort, cacheNamespace } = useConnection();
+  const { discoveredProxyPorts, trackedProxyPorts, refreshProxyState, trackProxyPort, untrackProxyPort, cacheNamespace, syncGeneration } = useConnection();
   const headerHeight = useHeaderHeight();
   const { register, unregister } = useSessionRegistryActions();
   const { height: windowHeight } = useWindowDimensions();
@@ -252,6 +253,7 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
   const pageUrlByTabRef = useRef<Record<string, string>>({ "1": "https://www.google.com" });
   const browserCacheLoadedRef = useRef(false);
   const browserCacheSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const browserCacheSnapshotRef = useRef<{ cacheKey: string; cache: BrowserPanelCache } | null>(null);
 
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
   const activeDevsoleState = devsoleStateByTab[activeTabId] || getDefaultDevsoleState();
@@ -289,22 +291,38 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
     );
   }, [collapsedDevsoleHeight, devsoleExpanded, devsoleHeight, expandedDevsoleHeight]);
 
+  const flushBrowserCache = useCallback(() => {
+    if (browserCacheSaveTimerRef.current) {
+      clearTimeout(browserCacheSaveTimerRef.current);
+      browserCacheSaveTimerRef.current = null;
+    }
+
+    const snapshot = browserCacheSnapshotRef.current;
+    if (!snapshot) return;
+    AsyncStorage.setItem(snapshot.cacheKey, JSON.stringify(snapshot.cache)).catch(() => {});
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     const cacheKey = cacheNamespace ? `${BROWSER_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
     browserCacheLoadedRef.current = false;
-    setTabs([]);
-    setActiveTabId("");
-    setUrlInput("");
-    setDevsoleStateByTab({});
-    setConsoleEntriesByTab({});
-    setNetworkEntriesByTab({});
-    setElementsSnapshotByTab({});
-    setResourcesSnapshotByTab({});
-    setInfoSnapshotByTab({});
-    pageUrlByTabRef.current = {};
+    browserCacheSnapshotRef.current = null;
+
+    const clearBrowserState = () => {
+      setTabs([]);
+      setActiveTabId("");
+      setUrlInput("");
+      setDevsoleStateByTab({});
+      setConsoleEntriesByTab({});
+      setNetworkEntriesByTab({});
+      setElementsSnapshotByTab({});
+      setResourcesSnapshotByTab({});
+      setInfoSnapshotByTab({});
+      pageUrlByTabRef.current = {};
+    };
 
     if (!cacheKey) {
+      clearBrowserState();
       browserCacheLoadedRef.current = true;
       return () => {
         cancelled = true;
@@ -313,7 +331,11 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
 
     AsyncStorage.getItem(cacheKey)
       .then((raw) => {
-        if (cancelled || !raw) return;
+        if (cancelled) return;
+        if (!raw) {
+          clearBrowserState();
+          return;
+        }
         const parsed = JSON.parse(raw) as Partial<BrowserPanelCache>;
         const cachedTabs = Array.isArray(parsed.tabs)
           ? parsed.tabs.map((tab) => ({ ...tab, loading: false, ready: true }))
@@ -333,24 +355,31 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
         setInfoSnapshotByTab(parsed.infoSnapshotByTab ?? {});
         pageUrlByTabRef.current = parsed.pageUrlByTab ?? Object.fromEntries(cachedTabs.map((tab) => [tab.id, tab.url]));
       })
-      .catch(() => {})
+      .catch(() => {
+        if (cancelled) return;
+        clearBrowserState();
+      })
       .finally(() => {
         if (!cancelled) browserCacheLoadedRef.current = true;
       });
 
     return () => {
       cancelled = true;
-      if (browserCacheSaveTimerRef.current) clearTimeout(browserCacheSaveTimerRef.current);
+      flushBrowserCache();
     };
-  }, [cacheNamespace]);
+  }, [cacheNamespace, flushBrowserCache]);
 
   useEffect(() => {
     const cacheKey = cacheNamespace ? `${BROWSER_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
-    if (!cacheKey || !browserCacheLoadedRef.current) return;
+    if (!cacheKey || !browserCacheLoadedRef.current) {
+      if (!cacheKey) browserCacheSnapshotRef.current = null;
+      return;
+    }
 
     if (browserCacheSaveTimerRef.current) clearTimeout(browserCacheSaveTimerRef.current);
-    browserCacheSaveTimerRef.current = setTimeout(() => {
-      const cache: BrowserPanelCache = {
+    browserCacheSnapshotRef.current = {
+      cacheKey,
+      cache: {
         tabs: tabs.map((tab) => ({ ...tab, loading: false })),
         activeTabId,
         urlInput,
@@ -362,8 +391,11 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
         infoSnapshotByTab,
         pageUrlByTab: pageUrlByTabRef.current,
         savedAt: Date.now(),
-      };
-      AsyncStorage.setItem(cacheKey, JSON.stringify(cache)).catch(() => {});
+      },
+    };
+    browserCacheSaveTimerRef.current = setTimeout(() => {
+      browserCacheSaveTimerRef.current = null;
+      flushBrowserCache();
     }, 600);
   }, [
     activeTabId,
@@ -371,12 +403,26 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
     consoleEntriesByTab,
     devsoleStateByTab,
     elementsSnapshotByTab,
+    flushBrowserCache,
     infoSnapshotByTab,
     networkEntriesByTab,
     resourcesSnapshotByTab,
     tabs,
     urlInput,
   ]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState !== "active") {
+        flushBrowserCache();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+      flushBrowserCache();
+    };
+  }, [flushBrowserCache]);
 
   const devsoleAnimatedStyle = useAnimatedStyle(() => ({
     height: devsoleHeight.value,
@@ -2112,6 +2158,10 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
       setProxySectionError(error instanceof Error ? error.message : String(error));
     });
   }, [activeDevsoleSection, devsoleOpen, refreshProxyState]);
+
+  useEffect(() => {
+    refreshProxyState().catch(() => {});
+  }, [refreshProxyState, syncGeneration]);
 
   const handleRefreshProxyState = useCallback(() => {
     setProxySectionError(null);

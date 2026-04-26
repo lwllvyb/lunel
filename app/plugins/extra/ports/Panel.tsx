@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
   Alert,
+  AppState,
 } from 'react-native';
 import { X, RefreshCw, AlertTriangle, Wifi, Search } from 'lucide-react-native';
 import Header, { useHeaderHeight } from "@/components/Header";
@@ -29,7 +30,9 @@ function PortsPanel({ instanceId, isActive }: PluginPanelProps) {
   const { colors, fonts, spacing, radius } = useTheme();
   const headerHeight = useHeaderHeight();
   const { ports: portsApi, isConnected } = useApi();
-  const { cacheNamespace } = useConnection();
+  const { cacheNamespace, syncGeneration } = useConnection();
+  const listPorts = portsApi.list;
+  const killPortByNumber = portsApi.kill;
 
   const [portsList, setPortsList] = useState<PortInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,8 +42,10 @@ function PortsPanel({ instanceId, isActive }: PluginPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const portsCacheLoadedRef = useRef(false);
   const portsCacheSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const portsCacheSnapshotRef = useRef<{ cacheKey: string; cache: PortsPanelCache } | null>(null);
   const portsListRef = useRef<PortInfo[]>([]);
   const portsListRequestIdRef = useRef(0);
+  const [portsCacheReadyVersion, setPortsCacheReadyVersion] = useState(0);
 
   const loadPorts = useCallback(async () => {
     if (!isConnected) {
@@ -52,7 +57,7 @@ function PortsPanel({ instanceId, isActive }: PluginPanelProps) {
     try {
       setError(null);
       setLoading(portsListRef.current.length === 0);
-      const result = await portsApi.list();
+      const result = await listPorts();
       if (portsListRequestIdRef.current !== requestId) return;
       setPortsList(result);
     } catch (err) {
@@ -63,19 +68,33 @@ function PortsPanel({ instanceId, isActive }: PluginPanelProps) {
       if (portsListRequestIdRef.current !== requestId) return;
       setLoading(false);
     }
-  }, [isConnected, portsApi]);
+  }, [isConnected, listPorts]);
 
   useEffect(() => {
     portsListRef.current = portsList;
   }, [portsList]);
 
+  const flushPortsCache = useCallback(() => {
+    if (portsCacheSaveTimerRef.current) {
+      clearTimeout(portsCacheSaveTimerRef.current);
+      portsCacheSaveTimerRef.current = null;
+    }
+
+    const snapshot = portsCacheSnapshotRef.current;
+    if (!snapshot) return;
+    AsyncStorage.setItem(snapshot.cacheKey, JSON.stringify(snapshot.cache)).catch(() => {});
+  }, []);
+
   useEffect(() => {
     const cacheKey = cacheNamespace ? `${PORTS_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
     portsCacheLoadedRef.current = false;
-    setPortsList([]);
-    portsListRef.current = [];
+    portsCacheSnapshotRef.current = null;
+    setPortsCacheReadyVersion(0);
     if (!cacheKey) {
+      setPortsList([]);
+      portsListRef.current = [];
       portsCacheLoadedRef.current = true;
+      setPortsCacheReadyVersion((current) => current + 1);
       return;
     }
 
@@ -83,52 +102,85 @@ function PortsPanel({ instanceId, isActive }: PluginPanelProps) {
 
     AsyncStorage.getItem(cacheKey)
       .then((raw) => {
-        if (cancelled || !raw) return;
+        if (cancelled) return;
+        if (!raw) {
+          setPortsList([]);
+          portsListRef.current = [];
+          return;
+        }
         const parsed = JSON.parse(raw) as Partial<PortsPanelCache>;
         const cachedPorts = Array.isArray(parsed.portsList) ? parsed.portsList : [];
         setPortsList(cachedPorts);
         portsListRef.current = cachedPorts;
         if (cachedPorts.length > 0) setLoading(false);
       })
-      .catch(() => {})
+      .catch(() => {
+        if (cancelled) return;
+        setPortsList([]);
+        portsListRef.current = [];
+      })
       .finally(() => {
-        if (!cancelled) portsCacheLoadedRef.current = true;
+        if (!cancelled) {
+          portsCacheLoadedRef.current = true;
+          setPortsCacheReadyVersion((current) => current + 1);
+        }
       });
 
     return () => {
       cancelled = true;
-      if (portsCacheSaveTimerRef.current) clearTimeout(portsCacheSaveTimerRef.current);
+      flushPortsCache();
     };
-  }, [cacheNamespace]);
+  }, [cacheNamespace, flushPortsCache]);
 
   useEffect(() => {
     const cacheKey = cacheNamespace ? `${PORTS_PANEL_CACHE_STORAGE_KEY}:${cacheNamespace}` : null;
-    if (!cacheKey || !portsCacheLoadedRef.current) return;
+    if (!cacheKey || !portsCacheLoadedRef.current) {
+      if (!cacheKey) portsCacheSnapshotRef.current = null;
+      return;
+    }
 
     if (portsCacheSaveTimerRef.current) clearTimeout(portsCacheSaveTimerRef.current);
-    portsCacheSaveTimerRef.current = setTimeout(() => {
-      const cache: PortsPanelCache = {
+    portsCacheSnapshotRef.current = {
+      cacheKey,
+      cache: {
         portsList,
         savedAt: Date.now(),
-      };
-      AsyncStorage.setItem(cacheKey, JSON.stringify(cache)).catch(() => {});
+      },
+    };
+    portsCacheSaveTimerRef.current = setTimeout(() => {
+      portsCacheSaveTimerRef.current = null;
+      flushPortsCache();
     }, 400);
-  }, [cacheNamespace, portsList]);
+  }, [cacheNamespace, flushPortsCache, portsList]);
 
   useEffect(() => {
-    if (isActive && isConnected) loadPorts();
-  }, [isActive, isConnected, loadPorts]);
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState !== 'active') {
+        flushPortsCache();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+      flushPortsCache();
+    };
+  }, [flushPortsCache]);
 
   useEffect(() => {
-    if (!isActive || !isConnected) return;
+    if (!isConnected || portsCacheReadyVersion === 0) return;
+    loadPorts();
+  }, [isConnected, loadPorts, portsCacheReadyVersion, syncGeneration]);
+
+  useEffect(() => {
+    if (!isActive || !isConnected || portsCacheReadyVersion === 0) return;
     const interval = setInterval(loadPorts, 10000);
     return () => clearInterval(interval);
-  }, [isActive, isConnected, loadPorts]);
+  }, [isActive, isConnected, loadPorts, portsCacheReadyVersion]);
 
   const killPort = async (port: number) => {
     setKillingPorts(prev => new Set(prev).add(port));
     try {
-      await portsApi.kill(port);
+      await killPortByNumber(port);
       setPortsList(prev => prev.filter(p => p.port !== port));
       loadPorts();
     } catch (err) {

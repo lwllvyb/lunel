@@ -106,6 +106,7 @@ interface ConnectionContextType {
   sessionState: SessionState;
   sessionCode: string | null;
   cacheNamespace: string | null;
+  syncGeneration: number;
   capabilities: Capabilities | null;
   error: string | null;
   isReconnecting: boolean;
@@ -140,6 +141,7 @@ const fallbackConnectionContext: ConnectionContextType = {
   sessionState: 'idle',
   sessionCode: null,
   cacheNamespace: null,
+  syncGeneration: 0,
   capabilities: null,
   error: 'Connection unavailable',
   isReconnecting: false,
@@ -326,6 +328,7 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
   const [sessionState, setSessionState] = useState<SessionState>('idle');
   const [sessionCode, setSessionCode] = useState<string | null>(null);
   const [cacheNamespace, setCacheNamespace] = useState<string | null>(null);
+  const [syncGeneration, setSyncGeneration] = useState(0);
   const [capabilities, setCapabilities] = useState<Capabilities | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isReconnecting, setIsReconnecting] = useState(false);
@@ -792,6 +795,7 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
             logger.info('connection', 'peer connected', { peer: message.peer ?? null, channel: 'v2' });
             setSessionState((current) => current === 'cli_offline_grace' ? 'pending' : current);
             setError(null);
+            setSyncGeneration((current) => current + 1);
             logger.info('connection', 'evaluating proxy configuration on peer connect', {
               hasSessionCode: Boolean(sessionCodeRef.current),
               hasSessionPassword: Boolean(sessionPasswordRef.current),
@@ -956,6 +960,7 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
     setInteractionBlockReason(null);
     setIsReconnecting(false);
     networkReachableRef.current = true;
+    setSyncGeneration((current) => current + 1);
 
     if (sessionPasswordRef.current) {
       await saveStoredSession({
@@ -1576,6 +1581,9 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
         if (status === 'connected' && discoveredPortsRef.current.length > 0) {
           startPortServers(discoveredPortsRef.current);
         }
+        if (statusRef.current === 'connected' && v2TransportRef.current) {
+          setSyncGeneration((current) => current + 1);
+        }
         if (!manualDisconnectRef.current && sessionPasswordRef.current && !reconnectingRef.current) {
           const needsReconnect = status !== 'connected' || !v2TransportRef.current;
           if (needsReconnect) {
@@ -1683,6 +1691,7 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
     sessionState,
     sessionCode,
     cacheNamespace,
+    syncGeneration,
     capabilities,
       error,
       isReconnecting,
@@ -1705,7 +1714,7 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
     sendData,
     fireData,
     onDataEvent,
-  }), [status, sessionState, sessionCode, cacheNamespace, capabilities, error, isReconnecting, interactionBlockReason, trackedProxyPorts, discoveredProxyPorts, connect, resumeSession, getStoredSession, getPairedSessions, revokePairedSession, removePairedSession, clearStoredSession, endSession, disconnect, refreshProxyState, trackProxyPort, untrackProxyPort, sendControl, sendData, fireData, onDataEvent]);
+  }), [status, sessionState, sessionCode, cacheNamespace, syncGeneration, capabilities, error, isReconnecting, interactionBlockReason, trackedProxyPorts, discoveredProxyPorts, connect, resumeSession, getStoredSession, getPairedSessions, revokePairedSession, removePairedSession, clearStoredSession, endSession, disconnect, refreshProxyState, trackProxyPort, untrackProxyPort, sendControl, sendData, fireData, onDataEvent]);
 
   return (
     <ConnectionContext.Provider value={value}>

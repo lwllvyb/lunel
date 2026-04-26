@@ -53,19 +53,18 @@ function stringifyFields(fields?: LogFields): string {
   }
 }
 
-function write(level: "log" | "warn" | "error", scope: string, message: string, fields?: LogFields) {
+function writeLog(level: "log" | "error", scope: string, message: string, fields?: LogFields) {
   const timestamp = new Date().toISOString();
   console[level](`[${timestamp}] [${scope}] ${message}${stringifyFields(fields)}`);
 }
 
 export const logger = {
-  info(scope: string, message: string, fields?: LogFields) {
-    write("log", scope, message, fields);
-  },
-  warn(scope: string, message: string, fields?: LogFields) {
-    write("warn", scope, message, fields);
+  info(_scope: string, _message: string, _fields?: LogFields) {},
+  warn(_scope: string, _message: string, _fields?: LogFields) {},
+  diagnostic(scope: string, message: string, fields?: LogFields) {
+    writeLog("log", scope, message, fields);
   },
   error(scope: string, message: string, fields?: LogFields) {
-    write("error", scope, message, fields);
+    writeLog("error", scope, message, fields);
   },
 };
