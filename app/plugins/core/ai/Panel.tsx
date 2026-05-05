@@ -534,21 +534,41 @@ function FilePartView({ part }: { part: AIPart }) {
   const url = typeof part.url === "string" ? part.url : "";
   const filename = typeof part.filename === "string" ? part.filename : "Attachment";
   const isImage = mime.startsWith("image/") && url.length > 0;
+  const [fullscreen, setFullscreen] = useState(false);
 
   if (isImage) {
     return (
-      <View style={{ marginTop: 4 }}>
-        <Image
-          source={{ uri: url }}
-          style={{
-            width: 180,
-            height: 180,
-            borderRadius: radius.lg,
-            backgroundColor: colors.bg.raised,
-          }}
-          resizeMode="cover"
-        />
-      </View>
+      <>
+        <View style={{ marginTop: 4 }}>
+          <TouchableOpacity onPress={() => setFullscreen(true)} activeOpacity={0.8}>
+            <Image
+              source={{ uri: url }}
+              style={{
+                width: 180,
+                height: 180,
+                borderRadius: radius.lg,
+                backgroundColor: colors.bg.raised,
+              }}
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
+        </View>
+        <Modal visible={fullscreen} transparent={false} animationType="fade" onRequestClose={() => setFullscreen(false)}>
+          <View style={{ flex: 1, backgroundColor: "#000", justifyContent: "center", alignItems: "center" }}>
+            <Image
+              source={{ uri: url }}
+              style={{ width: SCREEN_WIDTH, height: SCREEN_HEIGHT * 0.78 }}
+              resizeMode="contain"
+            />
+            <Pressable
+              onPress={() => setFullscreen(false)}
+              style={{ backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 24, paddingHorizontal: 24, paddingVertical: 10, marginTop: 20 }}
+            >
+              <Text style={{ color: "#fff", fontSize: 15, fontFamily: fonts.sans.medium }}>Close Image</Text>
+            </Pressable>
+          </View>
+        </Modal>
+      </>
     );
   }
 
