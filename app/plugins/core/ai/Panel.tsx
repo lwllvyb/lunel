@@ -1,6 +1,7 @@
 import Header, { BaseTab, useHeaderHeight } from "@/components/Header";
 import InfoSheet from "@/components/InfoSheet";
 import Loading from "@/components/Loading";
+import MediaViewer from "@/components/MediaViewer";
 import { LinearGradient } from "expo-linear-gradient";
 import { Codex, OpenCode, ClaudeCode, Gemini, Cursor } from "@lobehub/icons-rn";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
@@ -529,7 +530,7 @@ function TextPartView({ part, isUser }: { part: AIPart; isUser: boolean }) {
 }
 
 function FilePartView({ part }: { part: AIPart }) {
-  const { colors, radius, fonts } = useTheme();
+  const { colors, radius } = useTheme();
   const mime = typeof part.mime === "string" ? part.mime : "";
   const url = typeof part.url === "string" ? part.url : "";
   const filename = typeof part.filename === "string" ? part.filename : "Attachment";
@@ -553,21 +554,11 @@ function FilePartView({ part }: { part: AIPart }) {
             />
           </TouchableOpacity>
         </View>
-        <Modal visible={fullscreen} transparent={false} animationType="fade" onRequestClose={() => setFullscreen(false)}>
-          <View style={{ flex: 1, backgroundColor: "#000", justifyContent: "center", alignItems: "center" }}>
-            <Image
-              source={{ uri: url }}
-              style={{ width: SCREEN_WIDTH, height: SCREEN_HEIGHT * 0.78 }}
-              resizeMode="contain"
-            />
-            <Pressable
-              onPress={() => setFullscreen(false)}
-              style={{ backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 24, paddingHorizontal: 24, paddingVertical: 10, marginTop: 20 }}
-            >
-              <Text style={{ color: "#fff", fontSize: 15, fontFamily: fonts.sans.medium }}>Close Image</Text>
-            </Pressable>
-          </View>
-        </Modal>
+        <MediaViewer
+          visible={fullscreen}
+          imageUri={url}
+          onClose={() => setFullscreen(false)}
+        />
       </>
     );
   }
@@ -2217,6 +2208,83 @@ function ConfigureSheet({
   );
 }
 
+function AttachmentSheet({
+  visible,
+  onClose,
+  onGallery,
+  onCamera,
+  onFile,
+  colors,
+  fonts,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onGallery: () => void;
+  onCamera: () => void;
+  onFile: () => void;
+  colors: any;
+  fonts: any;
+}) {
+  const labelStyle = {
+    color: colors.fg.default,
+    fontSize: 14,
+    fontFamily: fonts.sans.regular,
+  };
+  const iconSlotStyle = {
+    width: 18,
+    alignItems: "center" as const,
+  };
+  const rowStyle = {
+    ...styles.sheetRow,
+    paddingHorizontal: 0,
+    backgroundColor: "transparent",
+    borderRadius: 8,
+  };
+
+  return (
+    <InfoSheet visible={visible} onClose={onClose} title="Attach" description="Add context">
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 0, paddingBottom: 48, gap: 12 }}
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={{ gap: 6 }}>
+          <TouchableOpacity
+            onPress={onGallery}
+            activeOpacity={0.7}
+            style={rowStyle}
+          >
+            <View style={iconSlotStyle}>
+              <Foundation name="photo" size={16} color={colors.fg.default} />
+            </View>
+            <Text style={labelStyle}>Select from Gallery</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onCamera}
+            activeOpacity={0.7}
+            style={rowStyle}
+          >
+            <View style={iconSlotStyle}>
+              <Feather name="camera" size={16} color={colors.fg.default} />
+            </View>
+            <Text style={labelStyle}>Take Photo</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onFile}
+            activeOpacity={0.7}
+            style={rowStyle}
+          >
+            <View style={iconSlotStyle}>
+              <Fontisto name="paperclip" size={13} color={colors.fg.default} />
+            </View>
+            <Text style={labelStyle}>Choose File</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </InfoSheet>
+  );
+}
+
 function TuneSheet({
   visible,
   onClose,
@@ -3564,7 +3632,8 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
   }, [resetEqualizer]);
 
   const handleAttachment = useCallback(() => {
-    setShowAttachMenu(prev => !prev);
+    setActiveSheet(null);
+    setShowAttachMenu(true);
   }, []);
 
   const handleAttachGallery = useCallback(async () => {
@@ -4676,8 +4745,8 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
                       activeOpacity={0.7}
                       style={{
                         position: "absolute",
-                        top: 6,
                         right: 6,
+                        bottom: 6,
                         width: 24,
                         height: 24,
                         borderRadius: 12,
@@ -4688,79 +4757,11 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
                     >
                       <X size={14} color={colors.fg.default} strokeWidth={2.2} />
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => {
-                        sendMessage().catch((err) => {
-                          console.error("Send image error:", err);
-                        });
-                      }}
-                      activeOpacity={0.7}
-                      style={{
-                        position: "absolute",
-                        right: 6,
-                        bottom: 6,
-                        width: 24,
-                        height: 24,
-                        borderRadius: 12,
-                        backgroundColor: colors.accent.default,
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Check size={14} color={'#ffffff'} strokeWidth={2.4} />
-                    </TouchableOpacity>
                   </View>
                 </View>
               ) : null}
 
               <View style={styles.composerBottomBar}>
-                {showAttachMenu && (
-                  <Pressable
-                    style={{ position: "absolute", top: -9999, left: -9999, right: -9999, bottom: -9999, zIndex: 998 }}
-                    onPress={() => setShowAttachMenu(false)}
-                  />
-                )}
-                {showAttachMenu && (
-                  <View style={{
-                    position: "absolute",
-                    bottom: "100%",
-                    left: 0,
-                    marginBottom: 8,
-                    backgroundColor: colors.bg.raised,
-                    borderRadius: 8,
-                    borderWidth: 0.5,
-                    borderColor: colors.border.secondary,
-                    overflow: "hidden",
-                    paddingVertical: 4,
-                    minWidth: 150,
-                    zIndex: 999,
-                  }}>
-                    <TouchableOpacity
-                      onPress={handleAttachGallery}
-                      activeOpacity={0.7}
-                      style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 7 }}
-                    >
-                      <Foundation name="photo" size={15} color={colors.fg.default} />
-                      <Text style={{ color: colors.fg.default, fontFamily: fonts.sans.regular, fontSize: typography.list }}>Select from Gallery</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={handleAttachCamera}
-                      activeOpacity={0.7}
-                      style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 7 }}
-                    >
-                      <Feather name="camera" size={14} color={colors.fg.default} />
-                      <Text style={{ color: colors.fg.default, fontFamily: fonts.sans.regular, fontSize: typography.list }}>Take Photo</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={handleAttachFile}
-                      activeOpacity={0.7}
-                      style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 7 }}
-                    >
-                      <Fontisto name="paperclip" size={13} color={colors.fg.default} />
-                      <Text style={{ color: colors.fg.default, fontFamily: fonts.sans.regular, fontSize: typography.list }}>Choose File</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
                 <View pointerEvents={isVoiceMode ? "none" : "auto"} style={styles.composerRow}>
                   {/* Left group: attachment + model + codex prefs */}
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0, overflow: "hidden" }}>
@@ -4775,7 +4776,10 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
 
                     <TouchableOpacity
                       style={{ padding: 6, alignItems: "center", justifyContent: "center" }}
-                      onPress={() => setActiveSheet(activeSheet === "tune" ? null : "tune")}
+                      onPress={() => {
+                        setShowAttachMenu(false);
+                        setActiveSheet(activeSheet === "tune" ? null : "tune");
+                      }}
                       activeOpacity={0.7}
                     >
                       <SlidersHorizontal size={16} color={colors.fg.default} style={{ opacity: 0.9 }} />
@@ -4783,7 +4787,10 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
 
                     <TouchableOpacity
                       style={[styles.modelButton, { borderColor: colors.border.secondary, flexShrink: 1, flexGrow: 0, minWidth: 40, maxWidth: 90 }]}
-                      onPress={() => setActiveSheet("configure")}
+                      onPress={() => {
+                        setShowAttachMenu(false);
+                        setActiveSheet("configure");
+                      }}
                       activeOpacity={0.7}
                       disabled={activeBackend !== "codex" && agents.length === 0 && modelOptions.length === 0}
                     >
@@ -4982,6 +4989,16 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
                 </TouchableOpacity>
               </View>
             )}
+
+            <AttachmentSheet
+              visible={showAttachMenu}
+              onClose={() => setShowAttachMenu(false)}
+              onGallery={handleAttachGallery}
+              onCamera={handleAttachCamera}
+              onFile={handleAttachFile}
+              colors={colors}
+              fonts={fonts}
+            />
 
             <ConfigureSheet
               visible={activeSheet === "configure"}
