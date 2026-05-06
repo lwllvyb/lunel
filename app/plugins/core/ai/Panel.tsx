@@ -107,6 +107,22 @@ function truncateButtonLabel(value: string, maxChars: number = BUTTON_LABEL_MAX_
   return `${value.slice(0, maxChars)}..`;
 }
 
+function isAbortLikeError(error: unknown): boolean {
+  if (typeof error === "string") {
+    return /abort|interrupt|cancel/i.test(error);
+  }
+
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const record = error as Record<string, unknown>;
+  const values = [record.name, record.message, record.code]
+    .filter((value): value is string => typeof value === "string");
+
+  return values.some((value) => /abort|interrupt|cancel/i.test(value));
+}
+
 function getDropdownHorizontalPosition(
   anchor: { x: number; width: number } | null,
   menuWidth: number,
@@ -2704,6 +2720,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
   const [workspaceFilesLoading, setWorkspaceFilesLoading] = useState(false);
   const [taggedFiles, setTaggedFiles] = useState<{ path: string; name: string }[]>([]);
   const [streamingBySession, setStreamingBySession] = useState<Record<string, true>>({});
+  const [stoppingBySession, setStoppingBySession] = useState<Record<string, true>>({});
   const [pendingPermission, setPendingPermission] = useState<AIPermission | null>(null);
   const [pendingQuestion, setPendingQuestion] = useState<AIQuestion | null>(null);
   const [activeSheet, setActiveSheet] = useState<ComposerSheet>(null);
@@ -2755,6 +2772,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
   const messagesListRef = useRef<FlashList<any>>(null);
   const messagesMapRef = useRef<Record<string, AIMessage[]>>({});
   const streamingBySessionRef = useRef<Record<string, true>>({});
+  const stoppingSessionIdsRef = useRef<Set<string>>(new Set());
   const codexFinalSyncInFlightRef = useRef<Set<string>>(new Set());
   const isNearBottomRef = useRef(true);
   const autoFollowRef = useRef(true);
@@ -2806,6 +2824,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
     [streamingBySession],
   );
   const isActiveSessionStreaming = !!activeSessionId && !!streamingBySession[activeSessionId];
+  const isActiveSessionStopping = !!activeSessionId && !!stoppingBySession[activeSessionId];
   const activeTab = useMemo(() => tabs.find((t) => t.id === activeTabId) ?? null, [tabs, activeTabId]);
   const activeBackend: AiBackend = activeTab?.backend ?? pendingBackend ?? "opencode";
   const agents = agentsByBackend[activeBackend] || [];
@@ -2935,7 +2954,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
           const shouldReplaceStreamingText = event.backend === "codex" && !!partId;
           if (sessId && msgId && part != null) {
             const nextActivityLabel = deriveActivityLabelFromPart(part);
-            if (nextActivityLabel) {
+            if (nextActivityLabel && !stoppingSessionIdsRef.current.has(sessId)) {
               setSessionActivityLabels((prev) => ({ ...prev, [sessId]: nextActivityLabel }));
             }
             setMessagesMap((prev) => {
@@ -3073,6 +3092,14 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
               delete next[sessId];
               return next;
             });
+            if (!streaming && !stoppingSessionIdsRef.current.has(sessId)) {
+              setStoppingBySession((prev) => {
+                if (!prev[sessId]) return prev;
+                const next = { ...prev };
+                delete next[sessId];
+                return next;
+              });
+            }
           }
           if (sessId && streaming) {
             setSessionActivityLabels((prev) => {
@@ -3081,6 +3108,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
                 current === "Searching codebase..."
                 || current === "Waiting for approval..."
                 || current === "Waiting for input..."
+                || current === "Stopping..."
               ) {
                 return prev;
               }
@@ -3109,6 +3137,14 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
               delete next[sessId];
               return next;
             });
+            if (!stoppingSessionIdsRef.current.has(sessId)) {
+              setStoppingBySession((prev) => {
+                if (!prev[sessId]) return prev;
+                const next = { ...prev };
+                delete next[sessId];
+                return next;
+              });
+            }
             setSessionActivityLabels((prev) => ({ ...prev, [sessId]: "Done" }));
             // Codex streams partial deltas; after completion force a canonical
             // re-read so final rendering is clean and fully normalized.
@@ -3180,6 +3216,10 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
           const errMsg = typeof rawErr === 'string' ? rawErr : (rawErr && typeof rawErr === 'object' ? ((rawErr as any).message || (rawErr as any).name || JSON.stringify(rawErr)) : null) || "An error occurred";
           const sessId = (props.sessionID as string) || (props.sessionId as string);
           if (sessId) {
+            if (stoppingSessionIdsRef.current.has(sessId) && isAbortLikeError(rawErr)) {
+              setSessionActivityLabels((prev) => ({ ...prev, [sessId]: "Interrupted" }));
+              break;
+            }
             setStreamingBySession((prev) => {
               if (!prev[sessId]) return prev;
               const next = { ...prev };
@@ -3939,6 +3979,42 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
     }
   }, []);
 
+  const abortSessionGracefully = useCallback(async (sessionId: string, backend: AiBackend) => {
+    if (stoppingSessionIdsRef.current.has(sessionId)) {
+      return;
+    }
+
+    stoppingSessionIdsRef.current.add(sessionId);
+    setStoppingBySession((prev) => ({ ...prev, [sessionId]: true }));
+    setStreamingBySession((prev) => ({ ...prev, [sessionId]: true }));
+    setSessionActivityLabels((prev) => ({ ...prev, [sessionId]: "Stopping..." }));
+
+    try {
+      await ai.abort(sessionId, backend);
+      if (backend === "opencode") {
+        await refreshSessionMessagesRef.current(sessionId, backend, true);
+      }
+      setSessionActivityLabels((prev) => ({ ...prev, [sessionId]: "Interrupted" }));
+      setStreamingBySession((prev) => {
+        if (!prev[sessionId]) return prev;
+        const next = { ...prev };
+        delete next[sessionId];
+        return next;
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to abort session";
+      Alert.alert("Abort Failed", message);
+    } finally {
+      stoppingSessionIdsRef.current.delete(sessionId);
+      setStoppingBySession((prev) => {
+        if (!prev[sessionId]) return prev;
+        const next = { ...prev };
+        delete next[sessionId];
+        return next;
+      });
+    }
+  }, [ai]);
+
   // Send message / handle slash commands
   const sendMessage = async (rawText?: string) => {
     let text = (rawText ?? inputText).trim();
@@ -4062,13 +4138,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
             await ai.unrevert(ensured, messageBackend);
             break;
           case "abort":
-            await ai.abort(ensured, messageBackend);
-            setStreamingBySession((prev) => {
-              if (!prev[ensured]) return prev;
-              const next = { ...prev };
-              delete next[ensured];
-              return next;
-            });
+            await abortSessionGracefully(ensured, messageBackend);
             break;
           case "init":
             if (messageBackend === "codex") {
@@ -4414,15 +4484,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
   const handleStop = async () => {
     if (activeSessionId) {
       const activeTab = tabs.find((t) => t.id === activeTabId);
-      try {
-        await ai.abort(activeSessionId, activeTab?.backend ?? "opencode");
-      } catch {}
-      setStreamingBySession((prev) => {
-        if (!prev[activeSessionId]) return prev;
-        const next = { ...prev };
-        delete next[activeSessionId];
-        return next;
-      });
+      await abortSessionGracefully(activeSessionId, activeTab?.backend ?? "opencode");
     }
   };
 
@@ -5032,6 +5094,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
                     <TouchableOpacity
                       style={[styles.sendButton, { backgroundColor: "transparent", borderColor: colors.border.main }]}
                       onPress={handleStop}
+                      disabled={isActiveSessionStopping}
                       activeOpacity={0.7}
                     >
                       <Square size={18} color={'#ef4444'} strokeWidth={2.5} fill={'#ef4444'} />

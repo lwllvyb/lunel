@@ -127,9 +127,16 @@ function normalizeOpenCodePart(part: unknown): Record<string, unknown> {
         attachments: state.attachments,
       });
     } else if (status === "error") {
-      normalized.error = readString(state.error) ?? "Tool failed";
-      const errorMessage = readString(state.error);
-      if (errorMessage) normalized.output = errorMessage;
+      if (metadata.interrupted === true) {
+        normalized.state = "completed";
+        normalized.interrupted = true;
+        const interruptedOutput = readString(metadata.output);
+        if (interruptedOutput) normalized.output = interruptedOutput;
+      } else {
+        normalized.error = readString(state.error) ?? "Tool failed";
+        const errorMessage = readString(state.error);
+        if (errorMessage) normalized.output = errorMessage;
+      }
     }
 
     const attachments = Array.isArray(state.attachments) ? state.attachments : [];
