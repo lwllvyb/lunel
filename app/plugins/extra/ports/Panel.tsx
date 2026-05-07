@@ -12,6 +12,7 @@ import { X, RefreshCw, AlertTriangle, Wifi, Search } from 'lucide-react-native';
 import Header, { useHeaderHeight } from "@/components/Header";
 import NotConnected from '@/components/NotConnected';
 import Loading from '@/components/Loading';
+import { useSessionRegistryActions } from '@/contexts/SessionRegistry';
 import { useTheme } from '@/contexts/ThemeContext';
 import { PluginPanelProps } from '../../types';
 import { useApi, PortInfo, ApiError } from '@/hooks/useApi';
@@ -20,6 +21,7 @@ function PortsPanel({ instanceId, isActive }: PluginPanelProps) {
   const { colors, fonts, spacing, radius } = useTheme();
   const headerHeight = useHeaderHeight();
   const { ports: portsApi, isConnected } = useApi();
+  const { register, unregister } = useSessionRegistryActions();
 
   const [portsList, setPortsList] = useState<PortInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +46,28 @@ function PortsPanel({ instanceId, isActive }: PluginPanelProps) {
       setLoading(false);
     }
   }, [isConnected, portsApi]);
+
+  const reconnectRefreshPorts = useCallback(async () => {
+    setKillingPorts(new Set());
+    try {
+      await loadPorts();
+    } finally {
+      setLoading(false);
+      setKillingPorts(new Set());
+    }
+  }, [loadPorts]);
+
+  useEffect(() => {
+    register('ports', {
+      sessions: [],
+      activeSessionId: null,
+      onSessionPress: () => {},
+      onSessionClose: () => {},
+      onCreateSession: () => {},
+      onReconnectRefreshAll: reconnectRefreshPorts,
+    });
+    return () => unregister('ports');
+  }, [reconnectRefreshPorts, register, unregister]);
 
   useEffect(() => {
     if (isActive && isConnected) loadPorts();

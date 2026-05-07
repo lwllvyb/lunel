@@ -461,6 +461,10 @@ export class OpenCodeProvider implements AIProvider {
     }
   }
 
+  async statuses(): Promise<{ statuses: Record<string, unknown> }> {
+    return { statuses: await this.fetchSessionStatuses() };
+  }
+
   // -------------------------------------------------------------------------
   // Interaction
   // -------------------------------------------------------------------------
@@ -949,10 +953,23 @@ export class OpenCodeProvider implements AIProvider {
   }
 
   private async refreshSessionStatuses(): Promise<void> {
+    const payload = await this.fetchSessionStatuses();
+    for (const [sessionId, status] of Object.entries(payload)) {
+      this.emitter?.({
+        type: "session.status",
+        properties: {
+          sessionID: sessionId,
+          status: status as Record<string, unknown>,
+        },
+      });
+    }
+  }
+
+  private async fetchSessionStatuses(): Promise<Record<string, unknown>> {
     const server = this.server;
     const authHeader = this.authHeader;
     if (!server || !authHeader) {
-      return;
+      return {};
     }
 
     const url = new URL("/session/status", server.url);
@@ -964,23 +981,14 @@ export class OpenCodeProvider implements AIProvider {
     });
 
     if (!response.ok) {
-      return;
+      return {};
     }
 
     const payload = await response.json().catch(() => null) as Record<string, unknown> | null;
     if (!payload || typeof payload !== "object") {
-      return;
+      return {};
     }
-
-    for (const [sessionId, status] of Object.entries(payload)) {
-      this.emitter?.({
-        type: "session.status",
-        properties: {
-          sessionID: sessionId,
-          status: status as Record<string, unknown>,
-        },
-      });
-    }
+    return payload;
   }
 
   private trackPermissionEvent(type: string, properties: Record<string, unknown>): void {

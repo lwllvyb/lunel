@@ -18,6 +18,7 @@ import {
 import * as FileSystem from 'expo-file-system/legacy';
 import * as DocumentPicker from 'expo-document-picker';
 import { FlashList } from '@shopify/flash-list';
+import { useSessionRegistryActions } from '@/contexts/SessionRegistry';
 import {
   CloudOff,
   X,
@@ -491,6 +492,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
   const directoryCountRequestIdRef = useRef(0);
   const lastLocalSearchPathRef = useRef(currentPath);
   const MAX_UPLOAD_SIZE_BYTES = 15 * 1024 * 1024;
+  const { register, unregister } = useSessionRegistryActions();
 
   const openWithSystem = async (item: FileEntry, pathOverride?: string) => {
     const filePath = pathOverride ?? (currentPath === '.' ? item.name : `${currentPath}/${item.name}`);
@@ -892,6 +894,76 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
       lastLocalSearchPathRef.current = currentPath;
     }
   }, [currentPath, searchFromRoot, searchMode]);
+
+  const reconnectRefreshExplorer = useCallback(async () => {
+    const selectedPath = selectedItem
+      ? (selectedItemPathOverride ?? (currentPath === '.' ? selectedItem.name : `${currentPath}/${selectedItem.name}`))
+      : null;
+    uploadCancelRequestedRef.current = true;
+    uploadPickerInFlightRef.current = false;
+    setUploading(false);
+    setUploadStage('idle');
+    setUploadStatusText('');
+    try {
+      await loadDirectory(currentPath);
+      if (selectedItem && selectedPath) {
+        try {
+          const stat = await fs.stat(selectedPath);
+          setSelectedItem((current) => current ? {
+            ...current,
+            type: stat.type,
+            size: stat.size,
+            mtime: stat.mtime,
+          } : current);
+          setSelectedItemIsBinary(stat.type === 'file' ? !!stat.isBinary : null);
+          if (stat.type === 'directory') {
+            try {
+              const entries = await fs.list(selectedPath);
+              setSelectedDirectoryItemCount(entries.length);
+            } catch {
+              setSelectedDirectoryItemCount(null);
+            }
+          } else {
+            setSelectedDirectoryItemCount(null);
+          }
+        } catch {
+          setSelectedItem(null);
+          setSelectedItemPathOverride(null);
+          setSelectedItemIsBinary(null);
+          setSelectedDirectoryItemCount(null);
+        }
+      }
+      if (!searchQuery.trim()) {
+        setRepoFileSearchLoading(false);
+        setCodebaseSearchLoading(false);
+        return;
+      }
+      if (searchMode === 'codebase') {
+        await runCodebaseSearch();
+      } else {
+        await runRepoFileSearch();
+      }
+    } finally {
+      setLoading(false);
+      setRepoFileSearchLoading(false);
+      setCodebaseSearchLoading(false);
+      setUploading(false);
+      setUploadStage('idle');
+      setUploadStatusText('');
+    }
+  }, [currentPath, fs, loadDirectory, runCodebaseSearch, runRepoFileSearch, searchMode, searchQuery, selectedItem, selectedItemPathOverride]);
+
+  useEffect(() => {
+    register('explorer', {
+      sessions: [],
+      activeSessionId: null,
+      onSessionPress: () => {},
+      onSessionClose: () => {},
+      onCreateSession: () => {},
+      onReconnectRefreshAll: reconnectRefreshExplorer,
+    });
+    return () => unregister('explorer');
+  }, [reconnectRefreshExplorer, register, unregister]);
 
   const navigateUp = useCallback(() => {
     if (currentPath === '.' || currentPath === '') return;

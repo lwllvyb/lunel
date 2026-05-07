@@ -91,6 +91,11 @@ export class AiManager {
   deleteSession(backend: AiBackend, id: string) { return this.get(backend).deleteSession(id); }
   renameSession(backend: AiBackend, id: string, title: string) { return this.get(backend).renameSession(id, title); }
   getMessages(backend: AiBackend, sessionId: string) { return this.get(backend).getMessages(sessionId); }
+  async statuses(backend: AiBackend): Promise<{ statuses: Record<string, unknown> }> {
+    const provider = this.get(backend);
+    if (!provider.statuses) return { statuses: {} };
+    return provider.statuses();
+  }
 
   prompt(
     backend: AiBackend,

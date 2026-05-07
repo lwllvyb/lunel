@@ -38,6 +38,8 @@ export interface SessionRegistration {
   onSessionClose: (id: string) => void;
   onSessionRename?: (id: string, title: string) => void;
   onCreateSession: () => void;
+  onReconnectRefreshSession?: (id: string) => Promise<void> | void;
+  onReconnectRefreshAll?: () => Promise<void> | void;
 }
 
 interface SessionRegistryActionsContextType {
@@ -72,6 +74,8 @@ export function SessionRegistryProvider({ children }: { children: React.ReactNod
         existing.onSessionClose = reg.onSessionClose;
         existing.onSessionRename = reg.onSessionRename;
         existing.onCreateSession = reg.onCreateSession;
+        existing.onReconnectRefreshSession = reg.onReconnectRefreshSession;
+        existing.onReconnectRefreshAll = reg.onReconnectRefreshAll;
         return prev;
       }
 

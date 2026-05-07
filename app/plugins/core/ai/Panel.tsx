@@ -190,6 +190,13 @@ function showBackendMissingInstallAlert(backend: AiBackend): void {
   );
 }
 
+function isAiStatusRunning(status: unknown): boolean {
+  const statusObj = status && typeof status === "object" ? status as Record<string, unknown> : null;
+  const statusType = typeof statusObj?.type === "string" ? statusObj.type : typeof status === "string" ? status : "";
+  const normalized = statusType.toLowerCase();
+  return normalized === "busy" || normalized === "running" || normalized === "working";
+}
+
 function sortTabsByUpdatedAt(tabs: AITab[]): AITab[] {
   return [...tabs].sort((a, b) => (a.updatedAt ?? 0) - (b.updatedAt ?? 0));
 }
@@ -3078,9 +3085,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
           // OpenCode: properties = { sessionID, status: { type: "idle" | "busy" | "retry" } }
           const sessId = (props.sessionID as string) || (props.sessionId as string);
           const statusObj = props.status as Record<string, unknown> | string | undefined;
-          const statusType = typeof statusObj === "object" ? (statusObj?.type as string) : (statusObj as string);
-          const normalized = (statusType || "").toLowerCase();
-          const streaming = normalized === "busy" || normalized === "running" || normalized === "working";
+          const streaming = isAiStatusRunning(statusObj);
           if (sessId) {
             setStreamingBySession((prev) => {
               if (streaming) {
@@ -3438,6 +3443,31 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
         logLoadedChatState("refresh-apply", sessionId, backend, next);
         return { ...prev, [sessionId]: next };
       });
+      try {
+        const statuses = await ai.getStatuses(backend);
+        if (Object.prototype.hasOwnProperty.call(statuses, sessionId)) {
+          const running = isAiStatusRunning(statuses[sessionId]);
+          setStreamingBySession((prev) => {
+            if (running) return prev[sessionId] ? prev : { ...prev, [sessionId]: true };
+            if (!prev[sessionId]) return prev;
+            const next = { ...prev };
+            delete next[sessionId];
+            return next;
+          });
+          if (running) {
+            setSessionActivityLabels((prev) => ({ ...prev, [sessionId]: prev[sessionId] || "Thinking..." }));
+          } else if (!stoppingSessionIdsRef.current.has(sessionId)) {
+            setStoppingBySession((prev) => {
+              if (!prev[sessionId]) return prev;
+              const next = { ...prev };
+              delete next[sessionId];
+              return next;
+            });
+          }
+        }
+      } catch {
+        // Older CLIs may not expose status snapshots yet.
+      }
     } catch {
       // best effort refresh
     } finally {
@@ -3759,6 +3789,85 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
       }
     }
   }, [tabs, messagesMap, ai]);
+
+  const clearReconnectTransientAiState = useCallback((sessionId?: string, preserveStatusState = false) => {
+    setWorkspaceFilesLoading(false);
+    setIsVoiceBusy(false);
+    setPendingPermission(null);
+    setPendingQuestion(null);
+    if (preserveStatusState) return;
+    if (!sessionId) {
+      streamingBySessionRef.current = {};
+      setStreamingBySession({});
+      setStoppingBySession({});
+      setSessionActivityLabels({});
+      return;
+    }
+    if (streamingBySessionRef.current[sessionId]) {
+      const nextStreamingRef = { ...streamingBySessionRef.current };
+      delete nextStreamingRef[sessionId];
+      streamingBySessionRef.current = nextStreamingRef;
+    }
+    setStreamingBySession((prev) => {
+      if (!prev[sessionId]) return prev;
+      const next = { ...prev };
+      delete next[sessionId];
+      return next;
+    });
+    setStoppingBySession((prev) => {
+      if (!prev[sessionId]) return prev;
+      const next = { ...prev };
+      delete next[sessionId];
+      return next;
+    });
+    setSessionActivityLabels((prev) => {
+      if (!prev[sessionId]) return prev;
+      const next = { ...prev };
+      delete next[sessionId];
+      return next;
+    });
+  }, []);
+
+  const reconnectRefreshSession = useCallback(async (tabId: string) => {
+    setIsInitialSessionsLoading(false);
+    const tab = tabs.find((candidate) => candidate.id === tabId);
+    if (!tab?.sessionId) {
+      clearReconnectTransientAiState();
+      setLoadingSessionId(null);
+      return;
+    }
+    clearReconnectTransientAiState(tab.sessionId);
+    try {
+      await refreshSessionMessages(tab.sessionId, tab.backend, true);
+    } finally {
+      clearReconnectTransientAiState(tab.sessionId, true);
+      setLoadingSessionId((current) => (current === tab.sessionId ? null : current));
+    }
+  }, [clearReconnectTransientAiState, refreshSessionMessages, tabs]);
+
+  const reconnectRefreshAll = useCallback(async () => {
+    setIsInitialSessionsLoading(false);
+    clearReconnectTransientAiState(undefined, true);
+    try {
+      const sessions = await ai.listSessions();
+      if (Array.isArray(sessions)) {
+        setSessionTabs((prev) => {
+          const nextTabs = reconcileSessionTabs(prev, sessions as AISession[]);
+          setActiveTabId((prevActive) => {
+            if (!prevActive) return prevActive;
+            return nextTabs.some((tab) => tab.id === prevActive) || draftTabs.some((tab) => tab.id === prevActive)
+              ? prevActive
+              : (nextTabs[nextTabs.length - 1]?.id ?? null);
+          });
+          return nextTabs;
+        });
+      }
+    } finally {
+      setIsInitialSessionsLoading(false);
+      setLoadingSessionId(null);
+      clearReconnectTransientAiState(undefined, true);
+    }
+  }, [ai, clearReconnectTransientAiState, draftTabs]);
 
   useEffect(() => {
     refreshSessionMessagesRef.current = refreshSessionMessages;
@@ -4605,8 +4714,10 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
       onSessionClose: deleteTab,
       onSessionRename: renameTab,
       onCreateSession: createNewTab,
+      onReconnectRefreshSession: reconnectRefreshSession,
+      onReconnectRefreshAll: reconnectRefreshAll,
     });
-  }, [tabs, activeTabId, status, isInitialized, isInitialSessionsLoading, register, handleTabPress, deleteTab, renameTab, createNewTab]);
+  }, [tabs, activeTabId, status, isInitialized, isInitialSessionsLoading, register, handleTabPress, deleteTab, renameTab, createNewTab, reconnectRefreshSession, reconnectRefreshAll]);
 
   useEffect(() => () => unregister('ai'), [unregister]);
 

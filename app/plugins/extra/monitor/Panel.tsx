@@ -19,6 +19,7 @@ import {
 import Header, { useHeaderHeight } from "@/components/Header";
 import NotConnected from '@/components/NotConnected';
 import Loading from '@/components/Loading';
+import { useSessionRegistryActions } from '@/contexts/SessionRegistry';
 import { useTheme } from '@/contexts/ThemeContext';
 import { PluginPanelProps } from '../../types';
 import { useApi, SystemInfo, ApiError } from '@/hooks/useApi';
@@ -149,6 +150,7 @@ function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
   const { colors, fonts, spacing, radius } = useTheme();
   const headerHeight = useHeaderHeight();
   const { monitor: monitorApi, isConnected } = useApi();
+  const { register, unregister } = useSessionRegistryActions();
 
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -173,6 +175,18 @@ function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
       setLoading(false);
     }
   }, [isConnected, monitorApi]);
+
+  useEffect(() => {
+    register('monitor', {
+      sessions: [],
+      activeSessionId: null,
+      onSessionPress: () => {},
+      onSessionClose: () => {},
+      onCreateSession: () => {},
+      onReconnectRefreshAll: loadSystemInfo,
+    });
+    return () => unregister('monitor');
+  }, [loadSystemInfo, register, unregister]);
 
   useEffect(() => {
     if (isActive && isConnected) loadSystemInfo();

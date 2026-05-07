@@ -77,6 +77,7 @@ export interface AIProvider {
 
   // Messages
   getMessages(sessionId: string): Promise<{ messages: MessageInfo[] }>;
+  statuses?(): Promise<{ statuses: Record<string, unknown> }>;
 
   // Interaction — prompt is fire-and-forget; results come via emitter
   prompt(

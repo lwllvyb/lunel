@@ -23,6 +23,7 @@ import {
   RouteOff,
 } from 'lucide-react-native';
 import Header, { useHeaderHeight } from "@/components/Header";
+import { useSessionRegistryActions } from '@/contexts/SessionRegistry';
 import NotConnected from '@/components/NotConnected';
 import Loading from '@/components/Loading';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -36,6 +37,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
   const isIPad = Platform.OS === 'ios' && Platform.isPad || width >= 768;
   const headerHeight = useHeaderHeight();
   const { processes: processApi, isConnected } = useApi();
+  const { register, unregister } = useSessionRegistryActions();
 
   const [processList, setProcessList] = useState<ProcessInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,20 +60,59 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
   const loadProcesses = useCallback(async () => {
     if (!isConnected) {
       setLoading(false);
-      return;
+      return [];
     }
 
     try {
       setError(null);
       const result = await processApi.list();
       setProcessList(result);
+      return result;
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Failed to load processes';
       setError(message);
+      return [];
     } finally {
       setLoading(false);
     }
   }, [isConnected, processApi]);
+
+  const reconnectRefreshProcesses = useCallback(async () => {
+    setOutputLoading(false);
+    setSpawning(false);
+    try {
+      const nextProcesses = await loadProcesses();
+      if (!selectedProcess) return;
+      const nextSelectedProcess = nextProcesses.find((process) => process.pid === selectedProcess.pid) ?? null;
+      setSelectedProcess(nextSelectedProcess);
+      if (!nextSelectedProcess) {
+        setProcessOutput('');
+        return;
+      }
+      try {
+        const output = await processApi.getOutput(nextSelectedProcess.channel);
+        setProcessOutput(output);
+      } catch {
+        // Best effort during reconnect refresh.
+      }
+    } finally {
+      setLoading(false);
+      setOutputLoading(false);
+      setSpawning(false);
+    }
+  }, [loadProcesses, processApi, selectedProcess]);
+
+  useEffect(() => {
+    register('processes', {
+      sessions: [],
+      activeSessionId: null,
+      onSessionPress: () => {},
+      onSessionClose: () => {},
+      onCreateSession: () => {},
+      onReconnectRefreshAll: reconnectRefreshProcesses,
+    });
+    return () => unregister('processes');
+  }, [reconnectRefreshProcesses, register, unregister]);
 
   // Load on mount and when active
   useEffect(() => {

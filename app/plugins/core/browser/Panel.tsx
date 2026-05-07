@@ -2067,6 +2067,32 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
     [tabs]
   );
 
+  const reconnectRefreshBrowserTab = useCallback(async (tabId: string) => {
+    setTabs((prev) => prev.map((tab) => (tab.id === tabId ? { ...tab, loading: false } : tab)));
+    setProxyMutationPending(false);
+    if (!devsoleOpen) return;
+    if (activeDevsoleSection === "elements") {
+      requestElementsSnapshot(tabId, "");
+    } else if (activeDevsoleSection === "resources") {
+      requestResourcesSnapshot(tabId);
+    } else if (activeDevsoleSection === "info") {
+      requestInfoSnapshot(tabId);
+    }
+  }, [activeDevsoleSection, devsoleOpen]);
+
+  const reconnectRefreshBrowser = useCallback(async () => {
+    setTabs((prev) => prev.map((tab) => ({ ...tab, loading: false })));
+    setProxyMutationPending(false);
+    try {
+      if (devsoleOpen && activeDevsoleSection === "proxies") {
+        await refreshProxyState();
+      }
+    } finally {
+      setTabs((prev) => prev.map((tab) => ({ ...tab, loading: false })));
+      setProxyMutationPending(false);
+    }
+  }, [activeDevsoleSection, devsoleOpen, refreshProxyState]);
+
   useEffect(() => {
     register('browser', {
       sessions: tabs,
@@ -2074,8 +2100,10 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
       onSessionPress: handleTabPress,
       onSessionClose: closeTab,
       onCreateSession: createNewTab,
+      onReconnectRefreshSession: reconnectRefreshBrowserTab,
+      onReconnectRefreshAll: reconnectRefreshBrowser,
     });
-  }, [tabs, activeTabId, register, handleTabPress, closeTab, createNewTab]);
+  }, [tabs, activeTabId, register, handleTabPress, closeTab, createNewTab, reconnectRefreshBrowserTab, reconnectRefreshBrowser]);
 
   useEffect(() => () => unregister('browser'), [unregister]);
 

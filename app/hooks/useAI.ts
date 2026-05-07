@@ -74,6 +74,12 @@ export function useAI(events?: AIEvents) {
     return response.payload.messages as AIMessage[];
   }, [sendData]);
 
+  const getStatuses = useCallback(async (backend: AiBackend = 'opencode'): Promise<Record<string, unknown>> => {
+    const response = await sendControl('ai', 'statuses', { backend });
+    if (!response.ok) throw new Error(response.error?.message || 'Failed to get AI statuses');
+    return (response.payload.statuses as Record<string, unknown>) || {};
+  }, [sendControl]);
+
   // Prompting
   const sendPrompt = useCallback(async (
     sessionId: string,
@@ -162,6 +168,7 @@ export function useAI(events?: AIEvents) {
     deleteSession,
     renameSession,
     getMessages,
+    getStatuses,
     sendPrompt,
     abort,
     getAgents,

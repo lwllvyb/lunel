@@ -621,6 +621,7 @@ export default function EditorPanel({ bottomBarHeight: _bottomBarHeight }: Plugi
               lastSavedContent: result.content,
               isDirty: false,
               isSaving: false,
+              isLoading: false,
               isDeleted: false,
               saveError: null,
               loadError: null,
@@ -650,6 +651,26 @@ export default function EditorPanel({ bottomBarHeight: _bottomBarHeight }: Plugi
     notifyFileDeleted,
   }), [activeTabId, insertText, notifyFileDeleted, notifyFileRenamed, openFile]);
 
+  const reconnectRefreshTab = useCallback(async (tabId: string) => {
+    const tab = tabsRef.current.find((candidate) => candidate.id === tabId);
+    if (!tab) {
+      return;
+    }
+    clearSaveTimer(tab.id);
+    if (tab.isDirty) {
+      setTabs((prev) =>
+        prev.map((candidate) =>
+          candidate.id === tab.id
+            ? { ...candidate, isSaving: false, isLoading: false }
+            : candidate
+        )
+      );
+      return;
+    }
+    if (tab.isDeleted || tab.loadError) return;
+    await reloadTabFromDisk(tab.id, tab.path);
+  }, [clearSaveTimer, reloadTabFromDisk]);
+
   useEffect(() => {
     registerEditorController(controller);
     return () => registerEditorController(null);
@@ -665,8 +686,9 @@ export default function EditorPanel({ bottomBarHeight: _bottomBarHeight }: Plugi
       onSessionPress: setActiveTabId,
       onSessionClose: closeTab,
       onCreateSession: () => {},
+      onReconnectRefreshSession: reconnectRefreshTab,
     });
-  }, [tabs, activeTabId, closeTab, register]);
+  }, [tabs, activeTabId, closeTab, register, reconnectRefreshTab]);
 
   useEffect(() => () => unregister("editor"), [unregister]);
 

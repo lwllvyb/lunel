@@ -1944,6 +1944,18 @@ export default function TerminalPanel({
     [colors],
   );
 
+  const reconnectRefreshTerminal = useCallback(async (tabId: string) => {
+    setMicInputLoading(false);
+    setMicInputVisible(false);
+    const tab = tabs.find((candidate) => candidate.id === tabId);
+    if (!tab?.terminalId || tab.exited) return;
+    try {
+      await resize(tab.terminalId, dimensionsRef.current.cols, dimensionsRef.current.rows);
+    } finally {
+      setMicInputLoading(false);
+    }
+  }, [resize, tabs]);
+
   useEffect(() => {
     register('terminal', {
       sessions: tabs,
@@ -1951,8 +1963,9 @@ export default function TerminalPanel({
       onSessionPress: setActiveTabId,
       onSessionClose: closeTab,
       onCreateSession: createNewTab,
+      onReconnectRefreshSession: reconnectRefreshTerminal,
     });
-  }, [tabs, activeTabId, register, closeTab, createNewTab]);
+  }, [tabs, activeTabId, register, closeTab, createNewTab, reconnectRefreshTerminal]);
 
   useEffect(() => () => unregister('terminal'), [unregister]);
 

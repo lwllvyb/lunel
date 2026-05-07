@@ -2,6 +2,7 @@ import Loading from "@/components/Loading";
 import PluginBottomBar from "@/components/PluginBottomBar";
 import PluginRenderer from "@/components/PluginRenderer";
 import { useConnection } from "@/contexts/ConnectionContext";
+import { useSessionRegistry } from "@/contexts/SessionRegistry";
 import { useTheme } from "@/contexts/ThemeContext";
 import { logger } from "@/lib/logger";
 import { usePlugins } from "@/plugins";
@@ -19,7 +20,8 @@ import {
 
 export default function WorkspaceScreen() {
   const { colors } = useTheme();
-  const { isLoading, openTab, setActiveTab } = usePlugins();
+  const { isLoading, openTab, openTabs, activeTabId, setActiveTab } = usePlugins();
+  const { registry } = useSessionRegistry();
   const { status, sessionState, error, isReconnecting, interactionBlockReason, disconnect } = useConnection();
   const router = useRouter();
   const drawerStatus = useDrawerStatus();
@@ -28,6 +30,9 @@ export default function WorkspaceScreen() {
   const prevSessionStateRef = useRef(sessionState);
   const reconnectAttemptVisibleRef = useRef(false);
   const reconnectFailureAlertVisibleRef = useRef(false);
+  const reconnectRefreshRunningRef = useRef(false);
+  const shouldRefreshAfterReconnectRef = useRef(false);
+  const hasConnectedOnceRef = useRef(false);
   const showConnectionNotice = status === "connecting" || isReconnecting || interactionBlockReason !== null;
 
   const handleGoHome = useCallback(() => {
@@ -71,9 +76,16 @@ export default function WorkspaceScreen() {
   useEffect(() => {
     const isReconnectingNow = status === "connecting" || isReconnecting || interactionBlockReason !== null;
     if (isReconnectingNow) {
+      if (hasConnectedOnceRef.current) {
+        shouldRefreshAfterReconnectRef.current = true;
+      }
       reconnectAttemptVisibleRef.current = true;
       reconnectFailureAlertVisibleRef.current = false;
       return;
+    }
+
+    if (status === "connected") {
+      hasConnectedOnceRef.current = true;
     }
 
     if (reconnectAttemptVisibleRef.current && status !== "connected" && error && !reconnectFailureAlertVisibleRef.current) {
@@ -92,6 +104,76 @@ export default function WorkspaceScreen() {
       reconnectAttemptVisibleRef.current = false;
     }
   }, [error, handleGoHome, interactionBlockReason, isReconnecting, status]);
+
+  useEffect(() => {
+    if (status !== "connected" || !shouldRefreshAfterReconnectRef.current || reconnectRefreshRunningRef.current) {
+      return;
+    }
+
+    const activePluginId = openTabs.find((tab) => tab.id === activeTabId)?.pluginId ?? null;
+    shouldRefreshAfterReconnectRef.current = false;
+    reconnectRefreshRunningRef.current = true;
+
+    const runRefresh = async () => {
+      const refreshSession = async (pluginId: string, sessionId: string) => {
+        const registration = registry[pluginId];
+        if (!registration?.onReconnectRefreshSession) return;
+        try {
+          await registration.onReconnectRefreshSession(sessionId);
+        } catch (refreshError) {
+          logger.warn("workspace", "reconnect session refresh failed", {
+            pluginId,
+            sessionId,
+            error: refreshError instanceof Error ? refreshError.message : String(refreshError),
+          });
+        }
+      };
+
+      const refreshPlugin = async (pluginId: string) => {
+        const registration = registry[pluginId];
+        if (!registration?.onReconnectRefreshAll) return;
+        try {
+          await registration.onReconnectRefreshAll();
+        } catch (refreshError) {
+          logger.warn("workspace", "reconnect plugin refresh failed", {
+            pluginId,
+            error: refreshError instanceof Error ? refreshError.message : String(refreshError),
+          });
+        }
+      };
+
+      const refreshPluginSessions = async (pluginId: string, skipSessionId?: string | null) => {
+        const registration = registry[pluginId];
+        if (!registration) return;
+        for (const session of registration.sessions) {
+          if (session.id === skipSessionId) continue;
+          await refreshSession(pluginId, session.id);
+        }
+      };
+
+      logger.info("workspace", "running reconnect refresh queue", { activePluginId });
+
+      if (activePluginId) {
+        const activeRegistration = registry[activePluginId];
+        const activeSessionId = activeRegistration?.activeSessionId ?? null;
+        if (activeSessionId) {
+          await refreshSession(activePluginId, activeSessionId);
+        }
+        await refreshPluginSessions(activePluginId, activeSessionId);
+        await refreshPlugin(activePluginId);
+      }
+
+      for (const tab of openTabs) {
+        if (tab.pluginId === activePluginId) continue;
+        await refreshPluginSessions(tab.pluginId);
+        await refreshPlugin(tab.pluginId);
+      }
+    };
+
+    void runRefresh().finally(() => {
+      reconnectRefreshRunningRef.current = false;
+    });
+  }, [activeTabId, openTabs, registry, status]);
 
   useFocusEffect(
     useCallback(() => {
@@ -137,7 +219,7 @@ export default function WorkspaceScreen() {
             paddingVertical: 4,
             backgroundColor: colors.bg.raised,
             borderBottomWidth: 1,
-            borderBottomColor: colors.border.default,
+            borderBottomColor: colors.border.main,
             alignItems: "center",
             justifyContent: "center",
             zIndex: 20,

@@ -41,6 +41,7 @@ import Toast from '@/components/Toast';
 import { useTheme } from '@/contexts/ThemeContext';
 import { typography } from '@/constants/themes';
 import { useConnection } from '@/contexts/ConnectionContext';
+import { useSessionRegistryActions } from '@/contexts/SessionRegistry';
 import { useApi, GitStatus, GitCommit, GitCommitDetails, ApiError } from '@/hooks/useApi';
 import { PluginPanelProps } from '../../types';
 import InputModal from '@/components/InputModal';
@@ -169,6 +170,7 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
   const headerHeight = useHeaderHeight();
   const { status: connStatus } = useConnection();
   const { git, fs } = useApi();
+  const { register, unregister } = useSessionRegistryActions();
   const isConnected = connStatus === 'connected';
 
   const [activeTab, setActiveTab] = useState<Tab>('changes');
@@ -224,9 +226,11 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
       const status = await git.status();
       setGitStatus(status);
       setError(null);
+      return status;
     } catch (err) {
       const apiError = err as ApiError;
       setError(apiError.code === 'ENOTGIT' ? 'Not a git repository' : (apiError.message || 'Failed to load status'));
+      return null;
     }
   }, [isConnected, git]);
 
@@ -263,6 +267,118 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
     await Promise.all([loadStatus(), loadCommits(), loadBranches()]);
     setLoading(false);
   }, [loadStatus, loadCommits, loadBranches]);
+
+  const reconnectRefreshGit = useCallback(async () => {
+    setRefreshing(false);
+    setLoadingMore(false);
+    setHistoryLoading(false);
+    setChangeDiffLoading(false);
+    setCommitDetailsLoading(false);
+    setLoadingCommitHash(null);
+    setActionLoading(false);
+    setPullLoading(false);
+    setPushLoading(false);
+    setStagingPaths(new Set());
+    setDiscardingPaths(new Set());
+    setStageAllLoading(false);
+    setUnstageAllLoading(false);
+    setDiscardAllLoading(false);
+    try {
+      let latestStatus: GitStatus | null | undefined = null;
+      if (activeTab === 'changes') {
+        latestStatus = await loadStatus();
+        await loadCommits();
+        await loadBranches();
+      } else if (activeTab === 'history') {
+        await loadCommits();
+        latestStatus = await loadStatus();
+        await loadBranches();
+      } else {
+        await loadBranches();
+        latestStatus = await loadStatus();
+        await loadCommits();
+      }
+
+      if (showCommitDetailsModal && selectedCommitDetails?.commit.hash) {
+        try {
+          const hash = selectedCommitDetails.commit.fullHash ?? selectedCommitDetails.commit.hash;
+          const details = await git.commitDetails(hash);
+          setSelectedCommitDetails(details);
+          setSelectedCommitFile((current) => (
+            current && details.files.some((file) => file.path === current)
+              ? current
+              : (details.files[0]?.path || null)
+          ));
+        } catch {
+          // Keep the existing modal data if detail refresh fails.
+        }
+      }
+
+      if (showFileDiffModal && selectedChangeFile) {
+        try {
+          const latestFile = latestStatus
+            ? (
+                latestStatus.staged.find((file) => file.path === selectedChangeFile.path)
+                ?? latestStatus.unstaged.find((file) => file.path === selectedChangeFile.path)
+                ?? (latestStatus.untracked.includes(selectedChangeFile.path)
+                  ? { path: selectedChangeFile.path, status: 'U' }
+                  : null)
+              )
+            : null;
+          if (!latestFile) {
+            setShowFileDiffModal(false);
+            setSelectedChangeFile(null);
+            setSelectedChangeDiff('');
+            setSelectedChangeContent(null);
+          } else {
+            const staged = latestStatus?.staged.some((file) => file.path === selectedChangeFile.path) ?? selectedChangeFile.staged;
+            const nextSelectedFile = { path: selectedChangeFile.path, staged, status: latestFile.status };
+            const diff = await git.diff(nextSelectedFile.path, nextSelectedFile.staged);
+            let content: string | null = null;
+            if (!nextSelectedFile.staged && nextSelectedFile.status === 'U' && !diff.trim()) {
+              const file = await fs.read(nextSelectedFile.path);
+              if (file.encoding === 'utf8') {
+                content = file.content;
+              }
+            }
+            setSelectedChangeFile(nextSelectedFile);
+            setSelectedChangeDiff(diff);
+            setSelectedChangeContent(content);
+          }
+        } catch {
+          // Keep the existing diff modal data if refresh fails.
+        }
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+      setLoadingMore(false);
+      setHistoryLoading(false);
+      setChangeDiffLoading(false);
+      setCommitDetailsLoading(false);
+      setLoadingCommitHash(null);
+      setActionLoading(false);
+      setPullLoading(false);
+      setPushLoading(false);
+      setStagingPaths(new Set());
+      setDiscardingPaths(new Set());
+      setStageAllLoading(false);
+      setUnstageAllLoading(false);
+      setDiscardAllLoading(false);
+    }
+  }, [activeTab, fs, git, loadBranches, loadCommits, loadStatus, selectedChangeFile, selectedCommitDetails, showCommitDetailsModal, showFileDiffModal]);
+
+  useEffect(() => {
+    register('git', {
+      sessions: [],
+      activeSessionId: null,
+      onSessionPress: () => {},
+      onSessionClose: () => {},
+      onCreateSession: () => {},
+      onReconnectRefreshAll: reconnectRefreshGit,
+    });
+    return () => unregister('git');
+  }, [register, reconnectRefreshGit, unregister]);
 
   useEffect(() => {
     if (isConnected && isActive) loadAll();

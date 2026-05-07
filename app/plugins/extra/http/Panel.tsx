@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo, useRef } from 'react';
+import React, { useState, useEffect, memo, useRef, useCallback } from 'react';
 import {
   ScrollView,
   Text,
@@ -15,6 +15,7 @@ import { MenuView } from '@react-native-menu/menu';
 import Header, { useHeaderHeight } from "@/components/Header";
 import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useSessionRegistryActions } from '@/contexts/SessionRegistry';
 import { typography } from '@/constants/themes';
 import { PluginPanelProps } from '../../types';
 import { lunelApi } from '@/lib/storage';
@@ -74,6 +75,7 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
   const { colors, fonts, spacing } = useTheme();
   const headerHeight = useHeaderHeight();
   const { http: httpApi, isConnected } = useApi();
+  const { register, unregister } = useSessionRegistryActions();
 
   const [method, setMethod] = useState<HttpMethod>('GET');
   const [url, setUrl] = useState('https://catfact.ninja/fact');
@@ -134,6 +136,28 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
   useEffect(() => {
     loadHistory().then(setHistory);
   }, []);
+
+  const reconnectRefreshHttp = useCallback(async () => {
+    setIsLoading(false);
+    try {
+      const nextHistory = await loadHistory();
+      setHistory(nextHistory);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    register('http', {
+      sessions: [],
+      activeSessionId: null,
+      onSessionPress: () => {},
+      onSessionClose: () => {},
+      onCreateSession: () => {},
+      onReconnectRefreshAll: reconnectRefreshHttp,
+    });
+    return () => unregister('http');
+  }, [reconnectRefreshHttp, register, unregister]);
 
   const addHeader = () => {
     setHeaders([...headers, { id: Date.now().toString(), key: '', value: '', enabled: true }]);
