@@ -28,6 +28,7 @@ export default function WorkspaceScreen() {
   const prevSessionStateRef = useRef(sessionState);
   const reconnectAttemptVisibleRef = useRef(false);
   const reconnectFailureAlertVisibleRef = useRef(false);
+  const showConnectionNotice = status === "connecting" || isReconnecting || interactionBlockReason !== null;
 
   const handleGoHome = useCallback(() => {
     logger.info("workspace", "navigating back to auth after disconnect");
@@ -123,56 +124,36 @@ export default function WorkspaceScreen() {
           setActiveTab={setActiveTab}
         />
       </View>
-      {(status === "connecting" || isReconnecting || interactionBlockReason !== null) ? (
+      {showConnectionNotice ? (
         <View
-          pointerEvents="auto"
+          pointerEvents="none"
           style={{
             position: "absolute",
-            inset: 0,
-            backgroundColor: "rgba(10, 10, 10, 0.16)",
+            top: 0,
+            left: 0,
+            right: 0,
+            minHeight: 24,
+            paddingHorizontal: 12,
+            paddingVertical: 4,
+            backgroundColor: colors.bg.raised,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border.default,
             alignItems: "center",
             justifyContent: "center",
-            padding: 24,
+            zIndex: 20,
+            elevation: 20,
           }}
         >
-          <View
+          <Text
             style={{
-              minWidth: 160,
-              borderRadius: 10,
-              paddingHorizontal: 16,
-              paddingVertical: 14,
-              backgroundColor: colors.bg.raised,
-              borderWidth: 1,
-              borderColor: colors.border.default,
-              alignItems: "center",
-              gap: 8,
+              color: colors.fg.muted,
+              fontSize: 12,
+              fontWeight: "600",
+              textAlign: "center",
             }}
           >
-            <View style={{ width: 20, height: 20 }}>
-              <Loading color={colors.fg.default} />
-            </View>
-            <Text
-              style={{
-                color: colors.fg.default,
-                fontSize: 16,
-                fontWeight: "600",
-                textAlign: "center",
-              }}
-            >
-              {interactionBlockReason === "offline" ? "Offline" : "Reconnecting"}
-            </Text>
-            <Text
-              style={{
-                color: colors.fg.muted,
-                fontSize: 13,
-                textAlign: "center",
-              }}
-            >
-              {interactionBlockReason === "offline"
-                ? "Waiting for internet connection..."
-                : "Restoring your session..."}
-            </Text>
-          </View>
+            {interactionBlockReason === "offline" ? "Offline. Waiting for connection..." : "Reconnecting..."}
+          </Text>
         </View>
       ) : null}
     </View>

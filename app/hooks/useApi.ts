@@ -166,9 +166,36 @@ function handleResponse<T>(response: Response): T {
 // ============================================================================
 
 export function useApi() {
-  const { sendControl, sendData, status } = useConnection();
+  const { sendControl: rawSendControl, sendData: rawSendData, status } = useConnection();
 
   const isConnected = status === 'connected';
+  const blockedWhileReconnecting = useCallback(() => (
+    new ApiError('ECONNECTING', 'Connection is reconnecting')
+  ), []);
+
+  const sendControl = useCallback((
+    ns: string,
+    action: string,
+    payload?: Record<string, unknown>,
+    timeoutMs?: number,
+  ) => {
+    if (!isConnected) {
+      return Promise.reject(blockedWhileReconnecting());
+    }
+    return rawSendControl(ns, action, payload, timeoutMs);
+  }, [blockedWhileReconnecting, isConnected, rawSendControl]);
+
+  const sendData = useCallback((
+    ns: string,
+    action: string,
+    payload?: Record<string, unknown>,
+    timeoutMs?: number,
+  ) => {
+    if (!isConnected) {
+      return Promise.reject(blockedWhileReconnecting());
+    }
+    return rawSendData(ns, action, payload, timeoutMs);
+  }, [blockedWhileReconnecting, isConnected, rawSendData]);
 
   // ============================================================================
   // File System API

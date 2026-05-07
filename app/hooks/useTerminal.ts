@@ -135,12 +135,16 @@ export function useTerminal(events?: TerminalEvents) {
   }, [onDataEvent]);
 
   const isConnected = status === 'connected';
+  const connectionNotReadyError = useCallback(() => new Error('Connection is reconnecting'), []);
 
   const spawn = useCallback(async (options: {
     shell?: string;
     cols?: number;
     rows?: number;
   } = {}): Promise<string> => {
+    if (!isConnected) {
+      throw connectionNotReadyError();
+    }
     const response = await sendControl('terminal', 'spawn', {
       shell: options.shell,
       cols: options.cols ?? 80,
@@ -150,29 +154,37 @@ export function useTerminal(events?: TerminalEvents) {
       throw new Error(response.error?.message || 'Failed to spawn terminal');
     }
     return response.payload.terminalId as string;
-  }, [sendControl]);
+  }, [connectionNotReadyError, isConnected, sendControl]);
 
   const write = useCallback((terminalId: string, data: string): void => {
+    if (!isConnected) return;
     fireData('terminal', 'write', { terminalId, data });
-  }, [fireData]);
+  }, [fireData, isConnected]);
 
   const resize = useCallback(async (terminalId: string, cols: number, rows: number): Promise<void> => {
+    if (!isConnected) {
+      throw connectionNotReadyError();
+    }
     const response = await sendControl('terminal', 'resize', { terminalId, cols, rows });
     if (!response.ok) {
       throw new Error(response.error?.message || 'Failed to resize terminal');
     }
-  }, [sendControl]);
+  }, [connectionNotReadyError, isConnected, sendControl]);
 
   const kill = useCallback(async (terminalId: string): Promise<void> => {
+    if (!isConnected) {
+      throw connectionNotReadyError();
+    }
     const response = await sendControl('terminal', 'kill', { terminalId });
     if (!response.ok) {
       throw new Error(response.error?.message || 'Failed to kill terminal');
     }
-  }, [sendControl]);
+  }, [connectionNotReadyError, isConnected, sendControl]);
 
   const scroll = useCallback((terminalId: string, offset: number): void => {
+    if (!isConnected) return;
     fireData('terminal', 'scroll', { terminalId, offset });
-  }, [fireData]);
+  }, [fireData, isConnected]);
 
   return {
     isConnected,
