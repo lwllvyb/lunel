@@ -2280,11 +2280,16 @@ function ConfigureSheet({
           {modelOptions.length > 0 ? modelOptions.map((option) => {
             const selected = option.id === selectedModelId;
             return (
-              <TouchableOpacity
+              <Pressable
                 key={option.id}
-                style={[styles.sheetRow, { backgroundColor: selected ? colors.bg.raised : "transparent", borderRadius: 8 }]}
+                style={({ pressed }) => [
+                  styles.sheetRow,
+                  {
+                    backgroundColor: selected ? colors.bg.raised : pressed ? colors.bg.raised : "transparent",
+                    borderRadius: 8,
+                  },
+                ]}
                 onPress={() => onSelectModel(option.id)}
-                activeOpacity={0.7}
               >
                 <View style={{ flex: 1 }}>
                   <Text numberOfLines={1} style={{ color: colors.fg.default, fontSize: 14, fontFamily: fonts.sans.regular }}>
@@ -2307,7 +2312,7 @@ function ConfigureSheet({
                     ))}
                   </View>
                 )}
-              </TouchableOpacity>
+              </Pressable>
             );
           }) : (
             <View style={[styles.backendOption, { backgroundColor: colors.bg.raised, borderRadius: 10, opacity: 0.7 }]}>
