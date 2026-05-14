@@ -175,7 +175,15 @@
     "es": "Espagnol",
     "pt": "Portugais (Brésil)",
     "de": "Allemand",
-    "fr": "Français"
+    "fr": "Français",
+    "vi": "Vietnamien",
+    "ru": "Russe",
+    "id": "Indonésien",
+    "pl": "Polonais",
+    "tr": "Turc",
+    "it": "Italien",
+    "nl": "Néerlandais",
+    "sv": "Suédois"
   },
   "settingsApp": {
     "title": "App",

@@ -11,9 +11,34 @@ import es from './locales/es.json';
 import pt from './locales/pt.json';
 import de from './locales/de.json';
 import fr from './locales/fr.json';
+import vi from './locales/vi.json';
+import ru from './locales/ru.json';
+import id from './locales/id.json';
+import pl from './locales/pl.json';
+import tr from './locales/tr.json';
+import it from './locales/it.json';
+import nl from './locales/nl.json';
+import sv from './locales/sv.json';
 
 export const LANGUAGE_KEY = '@lunel_language';
-export const SUPPORTED_LANGUAGES = ['en', 'zh', 'ja', 'ko', 'es', 'pt', 'de', 'fr'] as const;
+export const SUPPORTED_LANGUAGES = [
+  'en',
+  'zh',
+  'ja',
+  'ko',
+  'es',
+  'pt',
+  'de',
+  'fr',
+  'vi',
+  'ru',
+  'id',
+  'pl',
+  'tr',
+  'it',
+  'nl',
+  'sv',
+] as const;
 export type SupportedLanguage = typeof SUPPORTED_LANGUAGES[number];
 
 export async function getStoredLanguage(): Promise<string> {
@@ -37,6 +62,14 @@ i18n.use(initReactI18next).init({
     pt: { translation: pt },
     de: { translation: de },
     fr: { translation: fr },
+    vi: { translation: vi },
+    ru: { translation: ru },
+    id: { translation: id },
+    pl: { translation: pl },
+    tr: { translation: tr },
+    it: { translation: it },
+    nl: { translation: nl },
+    sv: { translation: sv },
   },
   lng: 'en',
   fallbackLng: 'en',
