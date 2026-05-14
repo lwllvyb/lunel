@@ -169,7 +169,13 @@
   "language": {
     "title": "Language",
     "en": "English",
-    "zh": "Chinese (Simplified)"
+    "zh": "Chinese (Simplified)",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "es": "Spanish",
+    "pt": "Portuguese (Brazil)",
+    "de": "German",
+    "fr": "French"
   },
   "settingsApp": {
     "title": "App",
