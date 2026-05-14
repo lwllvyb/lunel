@@ -1,4 +1,5 @@
 import Header, { useHeaderHeight } from "@/components/Header";
+import { useTranslation } from "react-i18next";
 import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { RefreshCw } from "lucide-react-native";
@@ -16,6 +17,7 @@ const BRAINROT_USER_AGENT =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
 
 export default function BrainrotPanel({ isActive }: PluginPanelProps) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const { settings } = useAppSettings();
   const headerHeight = useHeaderHeight();
@@ -56,7 +58,7 @@ export default function BrainrotPanel({ isActive }: PluginPanelProps) {
       ]}
     >
       <Header
-        title="Brainrot"
+        title={t('nav.brainrot')}
         colors={colors}
         rightAccessory={
           <TouchableOpacity

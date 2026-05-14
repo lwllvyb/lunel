@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import InfoSheet from '@/components/InfoSheet';
 import {
   ScrollView,
@@ -432,6 +433,7 @@ const FileItem = memo(function FileItem({
 
 
 function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
+  const { t } = useTranslation();
   const { colors, fonts, spacing, radius, isDark } = useTheme();
   const headerHeight = useHeaderHeight();
 
@@ -1438,17 +1440,17 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
 
   const getSortLabel = (option: SortOption) => {
     switch (option) {
-      case 'name': return 'Name';
-      case 'size': return 'Size';
-      case 'modified': return 'Modified';
+      case 'name': return t('explorer.sortName');
+      case 'size': return t('explorer.sortSize');
+      case 'modified': return t('explorer.sortModified');
     }
   };
 
   const getFilterLabel = (option: FilterOption) => {
     switch (option) {
-      case 'all': return 'All';
-      case 'files': return 'Files only';
-      case 'folders': return 'Folders only';
+      case 'all': return t('explorer.filterAll');
+      case 'files': return t('explorer.filterFiles');
+      case 'folders': return t('explorer.filterFolders');
     }
   };
 
@@ -1515,14 +1517,14 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
   const codebaseFileCount = useMemo(() => new Set(codebaseResults.map((match) => match.file)).size, [codebaseResults]);
   const codebaseMatchCountText = useMemo(() => String(codebaseResults.length), [codebaseResults.length]);
   const codebaseMatchLabel = useMemo(
-    () => `${codebaseResults.length} match${codebaseResults.length === 1 ? '' : 'es'}`,
-    [codebaseResults.length]
+    () => `${codebaseResults.length} ${codebaseResults.length === 1 ? t('explorer.matchSingular') : t('explorer.matchPlural')}`,
+    [codebaseResults.length, t]
   );
   const codebaseResultSummary = useMemo(() => {
-    if (codebaseSearchLoading) return `Searching in ${codebasePath.trim() || '.'}`;
-    const fileLabel = `${codebaseFileCount} file${codebaseFileCount === 1 ? '' : 's'}`;
-    return `${codebaseMatchLabel} across ${fileLabel} in ${codebasePath.trim() || '.'}`;
-  }, [codebaseFileCount, codebaseMatchLabel, codebasePath, codebaseSearchLoading]);
+    if (codebaseSearchLoading) return t('explorer.searchingIn', { path: codebasePath.trim() || '.' });
+    const fileLabel = `${codebaseFileCount} ${codebaseFileCount === 1 ? t('explorer.fileSingular') : t('explorer.filePlural')}`;
+    return `${codebaseMatchLabel} ${t('explorer.acrossInPath', { files: fileLabel, path: codebasePath.trim() || '.' })}`;
+  }, [codebaseFileCount, codebaseMatchLabel, codebasePath, codebaseSearchLoading, t]);
   const searchStateContainerStyle = {
     flex: 1,
     alignItems: 'center' as const,
@@ -1565,7 +1567,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
       <View style={{ flex: 1, backgroundColor: colors.bg.base, justifyContent: 'center', alignItems: 'center' }}>
         <CloudOff size={48} color={colors.fg.muted} />
         <Text style={{ color: colors.fg.muted, fontSize: 16, fontFamily: fonts.sans.regular, marginTop: spacing[3] }}>
-          Not connected to CLI
+          {t('common.notConnectedToCLI')}
         </Text>
       </View>
     );
@@ -1574,7 +1576,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg.base }}>
       <Header
-        title="Explorer"
+        title={t('nav.explorer')}
         colors={colors}
         rightAccessory={
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -1642,21 +1644,21 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
                 }
               }}
               actions={[
-                { id: 'new-file', title: 'New File' },
-                { id: 'new-folder', title: 'New Folder' },
-                { id: 'upload-file', title: 'Upload File' },
-                ...(copiedFile ? [{ id: 'paste-file', title: 'Paste File' }] : []),
-                ...(copiedFolder ? [{ id: 'paste-folder', title: 'Paste Folder' }] : []),
-                ...(movedFile ? [{ id: 'paste-move-file', title: 'Paste Move File' }] : []),
-                ...(movedFolder ? [{ id: 'paste-move-folder', title: 'Paste Move Folder' }] : []),
-                { id: 'copy-relative-path', title: 'Copy Relative Path' },
-                { id: 'copy-path', title: 'Copy Path' },
+                { id: 'new-file', title: t('explorer.newFile') },
+                { id: 'new-folder', title: t('explorer.newFolder') },
+                { id: 'upload-file', title: t('explorer.uploadFile') },
+                ...(copiedFile ? [{ id: 'paste-file', title: t('explorer.pasteFile') }] : []),
+                ...(copiedFolder ? [{ id: 'paste-folder', title: t('explorer.pasteFolder') }] : []),
+                ...(movedFile ? [{ id: 'paste-move-file', title: t('explorer.pasteMoveFile') }] : []),
+                ...(movedFolder ? [{ id: 'paste-move-folder', title: t('explorer.pasteMoveFolder') }] : []),
+                { id: 'copy-relative-path', title: t('explorer.copyRelativePathMenu') },
+                { id: 'copy-path', title: t('explorer.copyPathMenu') },
                 {
                   id: 'toggle-hidden-files',
-                  title: 'Show Hidden Files',
+                  title: t('explorer.showHiddenFiles'),
                   state: showHiddenFiles ? 'on' : 'off',
                 },
-                { id: 'refresh', title: 'Refresh' },
+                { id: 'refresh', title: t('explorer.refresh') },
               ]}
             >
               <TouchableOpacity style={{ padding: 8 }} activeOpacity={0.7}>
@@ -1698,7 +1700,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
                   color: colors.fg.default,
                   outline: 'none',
                 } as any}
-                placeholder={searchMode === 'codebase' ? 'search in codebase...' : 'search paths...'}
+                placeholder={searchMode === 'codebase' ? t('explorer.searchCodebasePlaceholder') : t('explorer.searchPathsPlaceholder')}
                 placeholderTextColor={colors.fg.subtle}
                 value={searchQuery}
                 onChangeText={(value) => {
@@ -1796,7 +1798,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
                   fontFamily: fonts.sans.medium,
                   color: colors.fg.muted,
                 }}>
-                  Path
+                  {t('explorer.pathLabel')}
                 </Text>
                 <TextInput
                   style={{
@@ -1868,7 +1870,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
                 fontFamily: fonts.sans.medium,
                 color: searchMode === 'files' ? '#ffffff' : colors.fg.default,
               }}>
-                Path Search
+                {t('explorer.pathSearch')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -1888,7 +1890,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
                 fontFamily: fonts.sans.medium,
                 color: searchMode === 'codebase' ? '#ffffff' : colors.fg.default,
               }}>
-                Codebase Search
+                {t('explorer.codebaseSearch')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -1903,21 +1905,21 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
                 <View style={searchStateContainerStyle}>
                   <Search size={28} color={colors.fg.subtle} />
                   <Text style={searchStateTextStyle}>
-                    Type to search across the entire codebase
+                    {t('explorer.searchCodebaseTip')}
                   </Text>
                 </View>
               ) : !hasCodebaseSearched ? (
                 <View style={searchStateContainerStyle}>
                   <Search size={28} color={colors.fg.subtle} />
                   <Text style={searchStateTextStyle}>
-                    Press search on keyboard to run codebase search
+                    {t('explorer.searchPressEnter')}
                   </Text>
                 </View>
               ) : codebaseSearchLoading ? (
                 <View style={searchStateContainerStyle}>
                   <ActivityIndicator size="small" color={colors.fg.muted} />
                   <Text style={searchStateTextStyle}>
-                    Searching in {codebasePath.trim() || '.'}...
+                    {t('explorer.searchingIn', { path: codebasePath.trim() || '.' })}
                   </Text>
                 </View>
               ) : codebaseSearchError ? (
@@ -1942,14 +1944,14 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
                   <FileCode2 size={36} color={colors.fg.subtle} strokeWidth={1.8} />
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <Text style={{ color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: 14 }}>
-                      No matches for
+                      {t('explorer.noMatchesFor')}
                     </Text>
                     <Text style={{ color: colors.fg.default, fontFamily: fonts.mono.medium, fontSize: 14 }}>
                       {searchQuery.trim()}
                     </Text>
                   </View>
                   <Text style={{ color: colors.fg.subtle, fontFamily: fonts.sans.regular, fontSize: typography.caption }}>
-                    Try a broader path or change the casing filter.
+                    {t('explorer.noMatchesTip')}
                   </Text>
                 </View>
               ) : (
@@ -1967,7 +1969,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
                       </Text>
                     </Text>
                     <Text style={{ color: colors.fg.subtle, fontFamily: fonts.sans.regular, fontSize: 13 }}>
-                      Tap a hit to open the file
+                      {t('explorer.tapHitToOpen')}
                     </Text>
                   </View>
                   {groupedCodebaseMatches.map((group) => (
@@ -2091,7 +2093,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
                   <View style={searchStateContainerStyle}>
                     <Search size={28} color={colors.fg.subtle} />
                     <Text style={searchStateTextStyle}>
-                      No matching paths inside {currentPath || '.'}
+                      {t('explorer.noMatchingPathsIn', { path: currentPath || '.' })}
                     </Text>
                   </View>
                 ) : (
@@ -2118,14 +2120,14 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
                 <View style={searchStateContainerStyle}>
                   <Search size={28} color={colors.fg.subtle} />
                   <Text style={searchStateTextStyle}>
-                    Tap search to find paths {searchFromRoot ? `in ${currentPath || '.'} + child folders` : `only in ${currentPath || '.'}`}
+                    {searchFromRoot ? t('explorer.tapSearchToFindWithFolders', { path: currentPath || '.' }) : t('explorer.tapSearchToFind', { path: currentPath || '.' })}
                   </Text>
                 </View>
               ) : repoFileSearchLoading ? (
                 <View style={searchStateContainerStyle}>
                   <ActivityIndicator size="small" color={colors.fg.muted} />
                   <Text style={searchStateTextStyle}>
-                    Searching in {currentPath || '.'} and child folders...
+                    {t('explorer.searchingInFolders', { path: currentPath || '.' })}
                   </Text>
                 </View>
               ) : repoFileSearchError ? (
@@ -2139,7 +2141,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
                 <View style={searchStateContainerStyle}>
                   <Search size={28} color={colors.fg.subtle} />
                   <Text style={searchStateTextStyle}>
-                    No matching paths {searchFromRoot ? `in ${currentPath || '.'} + child folders` : `inside ${currentPath || '.'}`}
+                    {searchFromRoot ? t('explorer.noMatchingPathsInWithFolders', { path: currentPath || '.' }) : t('explorer.noMatchingPathsIn', { path: currentPath || '.' })}
                   </Text>
                 </View>
               ) : (
@@ -2179,7 +2181,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
                 color: colors.fg.muted,
                 marginTop: spacing[3],
               }}>
-                {searchQuery ? 'No matching items' : 'This folder is empty'}
+                {searchQuery ? t('explorer.noMatchingItems') : t('explorer.folderEmpty')}
               </Text>
             </View>
           )}
@@ -2206,7 +2208,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
                 }}
               >
                 <Text style={{ fontSize: 14, fontFamily: fonts.sans.medium, color: colors.fg.default }}>
-                  Retry
+                  {t('explorer.retry')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -2254,7 +2256,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
         >
           <View>
             <Text style={{ fontSize: typography.caption, fontFamily: fonts.sans.medium, color: colors.fg.subtle, marginBottom: 4 }}>
-              Items
+              {t('explorer.items')}
             </Text>
             <Text style={{ fontSize: typography.body, fontFamily: fonts.sans.regular, color: colors.fg.default }}>
               {selectedItem?.type === 'directory'
@@ -2274,7 +2276,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
               >
                 <FileText size={20} color={colors.accent.default} />
                 <Text style={{ flex: 1, fontSize: typography.body, fontFamily: fonts.sans.semibold, color: colors.accent.default }}>
-                  Open in editor
+                  {t('explorer.openInEditor')}
                 </Text>
                 <ChevronRight size={18} color={colors.accent.default} />
               </TouchableOpacity>
@@ -2288,7 +2290,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
               >
                 <ExternalLink size={20} color={colors.accent.default} />
                 <Text style={{ flex: 1, fontSize: typography.body, fontFamily: fonts.sans.semibold, color: colors.accent.default }}>
-                  Open
+                  {t('common.open')}
                 </Text>
                 <ChevronRight size={18} color={colors.accent.default} />
               </TouchableOpacity>
@@ -2304,7 +2306,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
                   >
                     <Copy size={18} color={colors.fg.default} />
                     <Text style={{ flex: 1, fontSize: typography.body, fontFamily: fonts.sans.medium, color: colors.fg.default }}>
-                      Copy file
+                      {t('explorer.copyFile')}
                     </Text>
                     <ChevronRight size={18} color={colors.fg.subtle} />
                   </TouchableOpacity>
@@ -2318,7 +2320,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
                   >
                     <ArrowLeft size={18} color={colors.fg.default} />
                     <Text style={{ flex: 1, fontSize: typography.body, fontFamily: fonts.sans.medium, color: colors.fg.default }}>
-                      Move file
+                      {t('explorer.moveFile')}
                     </Text>
                     <ChevronRight size={18} color={colors.fg.subtle} />
                   </TouchableOpacity>
@@ -2336,7 +2338,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
                   >
                     <Copy size={18} color={colors.fg.default} />
                     <Text style={{ flex: 1, fontSize: typography.body, fontFamily: fonts.sans.medium, color: colors.fg.default }}>
-                      Copy folder
+                      {t('explorer.copyFolder')}
                     </Text>
                     <ChevronRight size={18} color={colors.fg.subtle} />
                   </TouchableOpacity>
@@ -2350,7 +2352,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
                   >
                     <ArrowLeft size={18} color={colors.fg.default} />
                     <Text style={{ flex: 1, fontSize: typography.body, fontFamily: fonts.sans.medium, color: colors.fg.default }}>
-                      Move folder
+                      {t('explorer.moveFolder')}
                     </Text>
                     <ChevronRight size={18} color={colors.fg.subtle} />
                   </TouchableOpacity>
@@ -2370,7 +2372,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
               >
                 <Copy size={18} color={colors.fg.default} />
                 <Text style={{ flex: 1, fontSize: typography.body, fontFamily: fonts.sans.medium, color: colors.fg.default }}>
-                  Copy relative path
+                  {t('explorer.copyRelativePath')}
                 </Text>
                 <ChevronRight size={18} color={colors.fg.subtle} />
               </TouchableOpacity>
@@ -2388,7 +2390,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
               >
                 <Copy size={18} color={colors.fg.default} />
                 <Text style={{ flex: 1, fontSize: typography.body, fontFamily: fonts.sans.medium, color: colors.fg.default }}>
-                  Copy path
+                  {t('explorer.copyPath')}
                 </Text>
                 <ChevronRight size={18} color={colors.fg.subtle} />
               </TouchableOpacity>
@@ -2402,7 +2404,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
               >
                 <Pencil size={18} color={colors.fg.default} />
                 <Text style={{ flex: 1, fontSize: typography.body, fontFamily: fonts.sans.medium, color: colors.fg.default }}>
-                  Rename
+                  {t('common.rename')}
                 </Text>
                 <ChevronRight size={18} color={colors.fg.subtle} />
               </TouchableOpacity>
@@ -2416,7 +2418,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
               >
                 <Trash size={18} color={colors.git.deleted} />
                 <Text style={{ flex: 1, fontSize: typography.body, fontFamily: fonts.sans.medium, color: colors.git.deleted }}>
-                  Delete
+                  {t('common.delete')}
                 </Text>
                 <ChevronRight size={18} color={colors.git.deleted} />
               </TouchableOpacity>
@@ -2462,7 +2464,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
                 color: colors.fg.default,
                 textAlign: 'center',
               }}>
-                Uploading File
+                {t('explorer.uploadingFile')}
               </Text>
               <Text style={{
                 fontSize: 14,
@@ -2472,7 +2474,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
                 lineHeight: 21,
                 paddingHorizontal: spacing[2],
               }}>
-                {uploadStatusText || 'Preparing upload...'}
+                {uploadStatusText || t('explorer.preparingUpload')}
               </Text>
             </View>
 
@@ -2495,7 +2497,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
                 fontFamily: fonts.sans.medium,
                 color: colors.fg.default,
               }}>
-                {uploadStage === 'writing' ? 'Finishing Upload...' : 'Cancel'}
+                {uploadStage === 'writing' ? t('explorer.finishingUpload') : t('common.cancel')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -2507,8 +2509,8 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
       <InfoSheet
         visible={showFiltersModal}
         onClose={() => setShowFiltersModal(false)}
-        title="Sort & Filter"
-        description="Adjust how files are sorted and shown"
+        title={t('explorer.sortFilterTitle')}
+        description={t('explorer.sortFilterDesc')}
       >
         <ScrollView contentContainerStyle={{ gap: spacing[4], paddingBottom: spacing[2] }}>
           <View>
@@ -2520,7 +2522,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
               letterSpacing: 0.5,
               marginBottom: spacing[2],
             }}>
-              Sort by
+              {t('explorer.sortBy')}
             </Text>
             <View style={{ gap: spacing[1] }}>
               {(['name', 'size', 'modified'] as SortOption[]).map(option => (
@@ -2563,7 +2565,7 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
               letterSpacing: 0.5,
               marginBottom: spacing[2],
             }}>
-              Show
+              {t('explorer.show')}
             </Text>
             <View style={{ gap: spacing[1] }}>
               {(['all', 'files', 'folders'] as FilterOption[]).map(option => (
@@ -2601,18 +2603,18 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
 
       <InputModal
         visible={showCreateFileModal}
-        title="New File"
-        acceptLabel="Create"
-        cancelLabel="Cancel"
+        title={t('explorer.newFileTitle')}
+        acceptLabel={t('explorer.create')}
+        cancelLabel={t('common.cancel')}
         onCancel={() => setShowCreateFileModal(false)}
         onAccept={(value) => { setShowCreateFileModal(false); void handleCreateSubmit(value, 'file'); }}
       />
 
       <InputModal
         visible={showCreateFolderModal}
-        title="New Folder"
-        acceptLabel="Create"
-        cancelLabel="Cancel"
+        title={t('explorer.newFolderTitle')}
+        acceptLabel={t('explorer.create')}
+        cancelLabel={t('common.cancel')}
         onCancel={() => setShowCreateFolderModal(false)}
         onAccept={(value) => { setShowCreateFolderModal(false); void handleCreateSubmit(value, 'directory'); }}
       />
@@ -2620,8 +2622,8 @@ function ExplorerPanel({ instanceId, isActive }: PluginPanelProps) {
       <InputModal
         visible={showRenameModal}
         title={renameTitle}
-        acceptLabel="Rename"
-        cancelLabel="Cancel"
+        acceptLabel={t('explorer.rename')}
+        cancelLabel={t('common.cancel')}
         initialValue={renameInitialValue}
         onCancel={() => setShowRenameModal(false)}
         onAccept={(value) => { setShowRenameModal(false); void handleRenameSubmit(value); }}

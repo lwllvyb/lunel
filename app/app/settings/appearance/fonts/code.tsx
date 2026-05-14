@@ -7,6 +7,7 @@ import {
 import { Check, Info } from "lucide-react-native";
 import { Stack, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { useTranslation } from "react-i18next";
 
 import React from "react";
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -85,6 +86,7 @@ export default function CodeFontPage() {
   } = useTheme();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
+  const { t } = useTranslation();
 
   const monoFontIds = Object.keys(monoFamilies) as MonoFamilyId[];
 
@@ -92,7 +94,7 @@ export default function CodeFontPage() {
     <View style={[styles.container, { backgroundColor: colors.bg.base }]}>
       <Stack.Screen options={{ headerShown: false }} />
       <Header
-        title="Code Font"
+        title={t('fontCode.title')}
         colors={colors}
         onBack={() => router.back()}
         rightAccessory={(
@@ -100,8 +102,8 @@ export default function CodeFontPage() {
             onPress={() => {
               void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               Alert.alert(
-                "Code Font",
-                "Used for code, terminal, and technical content.\n\nMonospace helps align indentation and symbols.\nPick one that clearly distinguishes characters like 0/O and 1/l."
+                t('fontCode.alertTitle'),
+                t('fontCode.alertMessage')
               );
             }}
             style={{ padding: 8 }}
@@ -124,7 +126,7 @@ export default function CodeFontPage() {
               <FontOption
                 key={id}
                 name={family.name}
-                sampleText="const app = () => { return 'Hello'; }"
+                sampleText={t('fontCode.sampleText')}
                 fontFamily={family.regular}
                 isSelected={fontSelection.mono === id}
                 onSelect={() => setMonoFont(id)}

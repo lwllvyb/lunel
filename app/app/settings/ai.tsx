@@ -3,6 +3,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import Header, { useHeaderHeight } from "@/components/Header";
 import { Minus, Plus } from "lucide-react-native";
 import { Stack, useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import React from "react";
 import {
@@ -81,20 +82,21 @@ export default function AISettingsPage() {
   const { config, updateConfig } = useEditorConfig();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
+  const { t } = useTranslation();
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg.base }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <Header title="AI" colors={colors} onBack={() => router.back()} />
+      <Header title={t('settingsAI.title')} colors={colors} onBack={() => router.back()} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
         <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: typography.caption }]}>
-          CHAT
+          {t('settingsAI.chat')}
         </Text>
         <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 10 }]}>
           <StepperRow
-            label="AI Font Size"
-            description="Base font size for AI chat messages"
+            label={t('settingsAI.aiFontSize')}
+            description={t('settingsAI.aiFontSizeDesc')}
             value={config.aiFontSize}
             min={13}
             max={20}

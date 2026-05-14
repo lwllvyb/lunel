@@ -6,6 +6,7 @@ import { SessionRegistryProvider } from "@/contexts/SessionRegistry";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { PluginProvider } from "@/plugins";
 import "@/plugins/load"; // Load all plugins
+import i18n, { getStoredLanguage } from "@/lib/i18n";
 // Sans fonts
 import {
   DMSans_400Regular,
@@ -143,6 +144,7 @@ function RootLayoutContent() {
       : colors.bg.base;
   const statusBarStyle = isLunelConnect || isDark ? "light" : "dark";
   const [isReady, setIsReady] = useState(false);
+  const [i18nReady, setI18nReady] = useState(false);
   const [fontsLoaded] = useFonts({
     // Sans fonts
     Inter_400Regular,
@@ -213,7 +215,12 @@ function RootLayoutContent() {
   });
 
   useEffect(() => {
-    // Proxy servers start dynamically when CLI reports open ports
+    getStoredLanguage().then((lang) => {
+      i18n.changeLanguage(lang).finally(() => setI18nReady(true));
+    });
+  }, []);
+
+  useEffect(() => {
     setIsReady(true);
   }, []);
 
@@ -255,7 +262,7 @@ function RootLayoutContent() {
     };
   }, [settings.keepAwakeEnabled]);
 
-  if (!isReady || !fontsLoaded) {
+  if (!isReady || !fontsLoaded || !i18nReady) {
     return null;
   }
 

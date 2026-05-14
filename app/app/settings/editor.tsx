@@ -3,6 +3,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import Header, { useHeaderHeight } from "@/components/Header";
 import { Minus, Plus } from "lucide-react-native";
 import { Stack, useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import React from "react";
 import {
@@ -132,21 +133,22 @@ export default function EditorSettingsPage() {
   const { config, updateConfig } = useEditorConfig();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
+  const { t } = useTranslation();
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg.base }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <Header title="Editor" colors={colors} onBack={() => router.back()} />
+      <Header title={t('settingsEditor.title')} colors={colors} onBack={() => router.back()} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
         {/* Font Section */}
         <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: typography.caption }]}>
-          FONT
+          {t('settingsEditor.font')}
         </Text>
         <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 10 }]}>
           <StepperRow
-            label="Font Size"
-            description="Size of text in the editor"
+            label={t('settingsEditor.fontSize')}
+            description={t('settingsEditor.fontSizeDesc')}
             value={config.fontSize}
             min={10}
             max={24}
@@ -155,14 +157,14 @@ export default function EditorSettingsPage() {
             onValueChange={(value) => updateConfig("fontSize", value)}
           />
           <ToggleRow
-            label="Wrap Lines"
-            description="Soft-wrap long lines in the editor"
+            label={t('settingsEditor.wrapLines')}
+            description={t('settingsEditor.wrapLinesDesc')}
             value={config.wrapLines}
             onValueChange={(value) => updateConfig("wrapLines", value)}
           />
           <ToggleRow
-            label="Auto Save"
-            description="Automatically save file changes as you type"
+            label={t('settingsEditor.autoSave')}
+            description={t('settingsEditor.autoSaveDesc')}
             value={config.autoSave}
             onValueChange={(value) => updateConfig("autoSave", value)}
           />

@@ -17,6 +17,7 @@ import Header, { useHeaderHeight } from "@/components/Header";
 import { usePlugins, CORE_PLUGIN_IDS } from '@/plugins';
 import { Lock, Plus, Grid3x3, X, CheckCircle2 } from 'lucide-react-native';
 import { PluginDefinition } from '@/plugins/types';
+import { useTranslation } from 'react-i18next';
 
 type SlotTarget = { type: 'row1' } | { type: 'row2'; index: number };
 
@@ -24,6 +25,7 @@ export default function BottomBarSettings() {
   const { colors, fonts, spacing, radius } = useTheme();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
+  const { t } = useTranslation();
   const {
     extraPlugins,
     getPlugin,
@@ -141,7 +143,7 @@ export default function BottomBarSettings() {
           marginBottom: spacing[2],
           textAlign: 'center',
         }}>
-          Preview
+          {t('common.preview')}
         </Text>
 
         {/* Row 1 Preview */}
@@ -283,7 +285,7 @@ export default function BottomBarSettings() {
               color: colors.accent.default,
               marginTop: spacing[1],
             }}>
-              Add
+              {t('bottomBar.add')}
             </Text>
           </>
         )}
@@ -345,7 +347,7 @@ export default function BottomBarSettings() {
                 fontFamily: fonts.sans.semibold,
                 color: colors.fg.default,
               }}>
-                Select Plugin
+                {t('bottomBar.selectPlugin')}
               </Text>
               <TouchableOpacity onPress={() => setPickerVisible(false)}>
                 <X size={24} color={colors.fg.muted} strokeWidth={2} />
@@ -384,14 +386,14 @@ export default function BottomBarSettings() {
                       fontFamily: fonts.sans.semibold,
                       color: '#ef4444',
                     }}>
-                      Remove Plugin
+                      {t('bottomBar.removePlugin')}
                     </Text>
                     <Text style={{
                       fontSize: 13,
                       fontFamily: fonts.sans.regular,
                       color: colors.fg.muted,
                     }}>
-                      Clear this slot
+                      {t('bottomBar.clearSlot')}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -406,7 +408,7 @@ export default function BottomBarSettings() {
                 letterSpacing: 0.5,
                 marginBottom: spacing[2],
               }}>
-                Available Plugins
+                {t('bottomBar.availablePlugins')}
               </Text>
 
               {available.length === 0 ? (
@@ -420,7 +422,7 @@ export default function BottomBarSettings() {
                     color: colors.fg.muted,
                     textAlign: 'center',
                   }}>
-                    All plugins are already in use
+                    {t('bottomBar.allPluginsInUse')}
                   </Text>
                 </View>
               ) : (
@@ -471,7 +473,7 @@ export default function BottomBarSettings() {
                           fontFamily: fonts.sans.regular,
                           color: colors.fg.muted,
                         }}>
-                          Extra plugin
+                          {t('bottomBar.extraPlugin')}
                         </Text>
                       </View>
                       {isCurrentlySelected && (
@@ -492,7 +494,7 @@ export default function BottomBarSettings() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg.base }}>
-      <Header title="Bottom Bar" colors={colors} onBack={() => router.back()} />
+      <Header title={t('bottomBar.title')} colors={colors} onBack={() => router.back()} />
 
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
         {/* Live Preview */}
@@ -506,7 +508,7 @@ export default function BottomBarSettings() {
             color: colors.fg.default,
             marginBottom: spacing[1],
           }}>
-            Main Row
+            {t('bottomBar.mainRow')}
           </Text>
           <Text style={{
             fontSize: 13,
@@ -514,7 +516,7 @@ export default function BottomBarSettings() {
             color: colors.fg.muted,
             marginBottom: spacing[2],
           }}>
-            Core plugins are locked. Tap the last slot to customize.
+            {t('bottomBar.mainRowDesc')}
           </Text>
 
           <View style={{
@@ -535,7 +537,7 @@ export default function BottomBarSettings() {
             color: colors.fg.default,
             marginBottom: spacing[1],
           }}>
-            Quick Access Row
+            {t('bottomBar.quickAccessRow')}
           </Text>
           <Text style={{
             fontSize: 13,
@@ -543,7 +545,7 @@ export default function BottomBarSettings() {
             color: colors.fg.muted,
             marginBottom: spacing[2],
           }}>
-            Tap any slot to add or change plugins.
+            {t('bottomBar.quickAccessRowDesc')}
           </Text>
 
           <View style={{

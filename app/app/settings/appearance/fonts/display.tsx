@@ -7,6 +7,7 @@ import {
 import { Check, Info } from "lucide-react-native";
 import { Stack, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { useTranslation } from "react-i18next";
 
 import React from "react";
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -85,6 +86,7 @@ export default function DisplayFontPage() {
   } = useTheme();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
+  const { t } = useTranslation();
 
   const displayFontIds = Object.keys(displayFamilies) as DisplayFamilyId[];
 
@@ -92,7 +94,7 @@ export default function DisplayFontPage() {
     <View style={[styles.container, { backgroundColor: colors.bg.base }]}>
       <Stack.Screen options={{ headerShown: false }} />
       <Header
-        title="Display Font"
+        title={t('fontDisplay.title')}
         colors={colors}
         onBack={() => router.back()}
         rightAccessory={(
@@ -100,8 +102,8 @@ export default function DisplayFontPage() {
             onPress={() => {
               void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               Alert.alert(
-                "Display Font",
-                "Used for headings and branding elements.\n\nBest for titles and visual emphasis, not long paragraphs.\nA stronger style here changes the app's personality quickly."
+                t('fontDisplay.alertTitle'),
+                t('fontDisplay.alertMessage')
               );
             }}
             style={{ padding: 8 }}
@@ -124,7 +126,7 @@ export default function DisplayFontPage() {
               <FontOption
                 key={id}
                 name={family.name}
-                sampleText="LUNEL"
+                sampleText={t('fontDisplay.sampleText')}
                 fontFamily={family.font}
                 isSelected={fontSelection.display === id}
                 onSelect={() => setDisplayFont(id)}

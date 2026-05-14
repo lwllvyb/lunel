@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, Text, View } from 'react-native';
 import { ThemeColors } from '@/constants/themes';
+import { useTranslation } from 'react-i18next';
 
 interface NotConnectedProps {
   colors: ThemeColors;
@@ -8,6 +9,8 @@ interface NotConnectedProps {
 }
 
 export default function NotConnected({ colors, fonts }: NotConnectedProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
       <Image
@@ -21,7 +24,7 @@ export default function NotConnected({ colors, fonts }: NotConnectedProps) {
         color: colors.fg.default,
         letterSpacing: 0.5,
       }}>
-        lunel
+        {t('notConnected.appName')}
       </Text>
       <Text style={{
         fontSize: 12,
@@ -30,7 +33,7 @@ export default function NotConnected({ colors, fonts }: NotConnectedProps) {
         marginTop: 4,
         letterSpacing: 0.3,
       }}>
-        ship from anywhere
+        {t('notConnected.tagline')}
       </Text>
     </View>
   );

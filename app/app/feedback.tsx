@@ -3,6 +3,7 @@ import Header, { useHeaderHeight } from "@/components/Header";
 import { Check, Star } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { Stack, useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -62,6 +63,7 @@ export default function FeedbackPage() {
   const { colors, fonts, radius, spacing, typography } = useTheme();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [content, setContent] = useState("");
   const [rating, setRating] = useState(0);
@@ -74,12 +76,12 @@ export default function FeedbackPage() {
   async function handleSend() {
     if (!canSend) {
       if (rating === 0) {
-        setError("Choose a rating.");
+        setError(t('feedback.errorRating'));
         return;
       }
 
       if (content.trim().length === 0) {
-        setError("Describe your feedback.");
+        setError(t('feedback.errorMessage'));
       }
 
       return;
@@ -108,7 +110,7 @@ export default function FeedbackPage() {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setIsSent(true);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Failed to send feedback.");
+      setError(submitError instanceof Error ? submitError.message : t('feedback.errorSend'));
     } finally {
       setIsSubmitting(false);
     }
@@ -138,7 +140,7 @@ export default function FeedbackPage() {
   return (
     <View style={[styles.container, { backgroundColor: colors.bg.base }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <Header title="Feedback" colors={colors} onBack={() => router.back()} />
+      <Header title={t('feedback.title')} colors={colors} onBack={() => router.back()} />
 
       {isSent ? (
         <View style={styles.sentState}>
@@ -154,7 +156,7 @@ export default function FeedbackPage() {
             <Check size={34} color={colors.bg.base} strokeWidth={2.5} />
           </View>
           <Text style={[styles.sentTitle, { color: colors.fg.default, fontFamily: fonts.sans.semibold }]}>
-            Sent
+            {t('feedback.sent')}
           </Text>
         </View>
       ) : (
@@ -162,7 +164,7 @@ export default function FeedbackPage() {
           <View style={[styles.pageSection, { marginHorizontal: 16 }]}>
             <View style={styles.introBlock}>
               <Text style={[styles.introTitle, { color: colors.fg.default, fontFamily: fonts.sans.semibold }]}>
-                Tell us what to improve
+                {t('feedback.subtitle')}
               </Text>
             </View>
 
@@ -180,7 +182,7 @@ export default function FeedbackPage() {
                 <TextInput
                   value={email}
                   onChangeText={handleEmailChange}
-                  placeholder="Email (optional)"
+                  placeholder={t('feedback.emailPlaceholder')}
                   placeholderTextColor={colors.fg.subtle}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -204,7 +206,7 @@ export default function FeedbackPage() {
                 <TextInput
                   value={content}
                   onChangeText={handleContentChange}
-                  placeholder="Tell us what worked, what broke, or what should improve."
+                  placeholder={t('feedback.messagePlaceholder')}
                   placeholderTextColor={colors.fg.subtle}
                   multiline
                   textAlignVertical="top"
@@ -256,7 +258,7 @@ export default function FeedbackPage() {
                   },
                 ]}
               >
-                Send
+                {t('feedback.send')}
               </Text>
             )}
           </TouchableOpacity>

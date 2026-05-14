@@ -1,4 +1,6 @@
 import Header, { BaseTab, useHeaderHeight } from "@/components/Header";
+import { useTranslation } from "react-i18next";
+import i18n from "@/lib/i18n";
 import InfoSheet from "@/components/InfoSheet";
 import Loading from "@/components/Loading";
 import MediaViewer from "@/components/MediaViewer";
@@ -185,8 +187,8 @@ function isBackendUnavailableError(message: string): boolean {
 function showBackendMissingInstallAlert(backend: AiBackend): void {
   const backendLabel = formatBackendSessionTitle(backend);
   Alert.alert(
-    `${backendLabel} Not Installed`,
-    `Your PC doesn't have ${backendLabel} installed. Either install it manually, or run npx lunel-cli again and press y when it asks to install missing AI runtimes.`,
+    i18n.t('aiPanel.notInstalledTitle', { backend: backendLabel }),
+    i18n.t('aiPanel.notInstalledDesc', { backend: backendLabel }),
   );
 }
 
@@ -525,13 +527,13 @@ function getPermissionFields(permission: AIPermission): Array<{ label: string; v
 
   const fields: Array<{ label: string; value: string }> = [];
   if (reason && reason !== permission.title) {
-    fields.push({ label: "Reason", value: reason });
+    fields.push({ label: i18n.t('aiPanel.fieldReason'), value: reason });
   }
   if (command) {
-    fields.push({ label: "Command", value: command });
+    fields.push({ label: i18n.t('aiPanel.fieldCommand'), value: command });
   }
   if (cwd) {
-    fields.push({ label: "Directory", value: cwd });
+    fields.push({ label: i18n.t('aiPanel.fieldDirectory'), value: cwd });
   }
   return fields;
 }
@@ -556,9 +558,10 @@ function TextPartView({ part, isUser }: { part: AIPart; isUser: boolean }) {
 
 function FilePartView({ part, enforceBottomSpacing = false }: { part: AIPart; enforceBottomSpacing?: boolean }) {
   const { colors, radius } = useTheme();
+  const { t } = useTranslation();
   const mime = typeof part.mime === "string" ? part.mime : "";
   const url = typeof part.url === "string" ? part.url : "";
-  const filename = typeof part.filename === "string" ? part.filename : "Attachment";
+  const filename = typeof part.filename === "string" ? part.filename : t('aiPanel.attachment');
   const isImage = mime.startsWith("image/") && url.length > 0;
   const [fullscreen, setFullscreen] = useState(false);
   const [imagePreviewSize, setImagePreviewSize] = useState<{ width: number; height: number } | null>(null);
@@ -892,8 +895,8 @@ function SnakeDotsLoader({
 }
 
 function deriveActivityLabelFromPart(part: AIPart): string | null {
-  if (part.type === "reasoning") return "Thinking...";
-  if (part.type === "plan") return "Planning...";
+  if (part.type === "reasoning") return i18n.t('aiPanel.activityThinking');
+  if (part.type === "plan") return i18n.t('aiPanel.activityPlanning');
   if (part.type !== "tool" && part.type !== "tool-call" && part.type !== "tool-result") return null;
 
   const inputRaw = typeof part.input === "string"
@@ -905,7 +908,7 @@ function deriveActivityLabelFromPart(part: AIPart): string | null {
     ? part.output
     : "";
   const raw = `${String(part.toolName || "")} ${String(part.name || "")} ${inputRaw} ${outputRaw}`.toLowerCase();
-  if (!raw) return "Working...";
+  if (!raw) return i18n.t('aiPanel.activityWorking');
 
   if (
     raw.includes("search")
@@ -926,7 +929,7 @@ function deriveActivityLabelFromPart(part: AIPart): string | null {
     || raw.includes("open_file")
     || raw.includes("view file")
   ) {
-    return "Searching codebase...";
+    return i18n.t('aiPanel.activitySearching');
   }
 
   if (
@@ -937,14 +940,14 @@ function deriveActivityLabelFromPart(part: AIPart): string | null {
     || raw.includes("filechange")
     || raw.includes("diff")
   ) {
-    return "Working...";
+    return i18n.t('aiPanel.activityWorking');
   }
 
   if (raw.includes("command") || raw.includes("exec")) {
-    return "Working...";
+    return i18n.t('aiPanel.activityWorking');
   }
 
-  return "Working...";
+  return i18n.t('aiPanel.activityWorking');
 }
 
 type MessageDisplayItem =
@@ -1018,25 +1021,27 @@ function formatExplorationEntry(part: AIPart): string | null {
 
   if (kind === "read") {
     const label = path || pattern;
-    return label ? `Read  ${label}` : "Read";
+    return label ? `${i18n.t('aiPanel.toolRead')}  ${label}` : i18n.t('aiPanel.toolRead');
   }
 
   if (toolName.includes("glob")) {
-    if (path && pattern) return `Glob  ${path} / pattern=${pattern}`;
-    if (pattern) return `Glob  pattern=${pattern}`;
-    if (path) return `Glob  ${path}`;
-    return "Glob";
+    const g = i18n.t('aiPanel.toolGlob');
+    if (path && pattern) return `${g}  ${path} / pattern=${pattern}`;
+    if (pattern) return `${g}  pattern=${pattern}`;
+    if (path) return `${g}  ${path}`;
+    return g;
   }
 
   if (toolName.includes("grep") || toolName.includes("search") || toolName.includes("find")) {
-    if (path && pattern) return `Search  ${path} / pattern=${pattern}`;
-    if (pattern) return `Search  pattern=${pattern}`;
-    if (path) return `Search  ${path}`;
-    return "Search";
+    const s = i18n.t('aiPanel.toolSearch');
+    if (path && pattern) return `${s}  ${path} / pattern=${pattern}`;
+    if (pattern) return `${s}  pattern=${pattern}`;
+    if (path) return `${s}  ${path}`;
+    return s;
   }
 
   if (toolName.includes("tree") || toolName === "ls" || toolName.includes("list")) {
-    return path ? `Browse  ${path}` : "Browse";
+    return path ? `${i18n.t('aiPanel.toolBrowse')}  ${path}` : i18n.t('aiPanel.toolBrowse');
   }
 
   return path || pattern ? `${toolName}  ${path || pattern}` : toolName;
@@ -1859,6 +1864,7 @@ function PermissionSheet({
   const [modalVisible, setModalVisible] = useState(false);
   const backdropOpacity = useSharedValue(0);
   const sheetTranslateY = useSharedValue(SCREEN_HEIGHT);
+  const { t } = useTranslation();
   const fields = getPermissionFields(permission);
 
   const hideModal = useCallback(() => setModalVisible(false), []);
@@ -1923,7 +1929,7 @@ function PermissionSheet({
           >
             <View style={styles.sheetHeader}>
               <Text style={{ color: colors.fg.default, fontSize: 20, fontFamily: fonts.sans.semibold, flex: 1 }}>
-                Permission Request
+                {t('aiPanel.permissionRequest')}
               </Text>
             </View>
 
@@ -1965,7 +1971,7 @@ function PermissionSheet({
                   style={[styles.permissionSheetPrimaryButton, { backgroundColor: colors.accent.default, borderRadius: radius.xl }]}
                   activeOpacity={0.75}
                 >
-                  <Text style={{ color: '#ffffff', fontSize: 14, fontFamily: fonts.sans.semibold }}>Allow Once</Text>
+                  <Text style={{ color: '#ffffff', fontSize: 14, fontFamily: fonts.sans.semibold }}>{t('aiPanel.allowOnce')}</Text>
                 </TouchableOpacity>
                 <View style={{ gap: 8 }}>
                   <TouchableOpacity
@@ -1973,14 +1979,14 @@ function PermissionSheet({
                     style={[styles.permissionSheetSecondaryButton, { backgroundColor: colors.bg.base, borderRadius: radius.xl, borderColor: colors.border.secondary }]}
                     activeOpacity={0.75}
                   >
-                    <Text style={{ color: colors.fg.default, fontSize: 14, fontFamily: fonts.sans.semibold }}>Always Allow</Text>
+                    <Text style={{ color: colors.fg.default, fontSize: 14, fontFamily: fonts.sans.semibold }}>{t('aiPanel.alwaysAllow')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => onReply("reject")}
                     style={[styles.permissionSheetSecondaryButton, { backgroundColor: colors.bg.base, borderRadius: radius.xl, borderColor: colors.border.secondary }]}
                     activeOpacity={0.75}
                   >
-                    <Text style={{ color: colors.fg.default, fontSize: 14, fontFamily: fonts.sans.semibold }}>Deny</Text>
+                    <Text style={{ color: colors.fg.default, fontSize: 14, fontFamily: fonts.sans.semibold }}>{t('aiPanel.deny')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -2000,6 +2006,7 @@ function QuestionDialog({ questionRequest, colors, radius, fonts, onSubmit, onRe
   onSubmit: (answers: string[][]) => void;
   onReject: () => void;
 }) {
+  const { t } = useTranslation();
   const questions = Array.isArray(questionRequest.questions) ? questionRequest.questions : [];
   const [selectedIndices, setSelectedIndices] = useState<Record<number, number | null>>(() =>
     Object.fromEntries(questions.map((question, index) => [index, Array.isArray(question?.options) && question.options.length > 0 ? 0 : null]))
@@ -2057,7 +2064,7 @@ function QuestionDialog({ questionRequest, colors, radius, fonts, onSubmit, onRe
           <View style={[styles.modalContent, { backgroundColor: colors.bg.raised, borderRadius: radius.md, borderColor: colors.bg.raised }]}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
               <Sparkles size={20} color={colors.accent.default} strokeWidth={2} />
-              <Text style={{ color: colors.fg.default, fontSize: 15, fontFamily: fonts.sans.semibold }}>Input Needed</Text>
+              <Text style={{ color: colors.fg.default, fontSize: 15, fontFamily: fonts.sans.semibold }}>{t('aiPanel.inputNeeded')}</Text>
             </View>
             <ScrollView
               style={{ maxHeight: 420 }}
@@ -2085,7 +2092,7 @@ function QuestionDialog({ questionRequest, colors, radius, fonts, onSubmit, onRe
                     <View style={{ gap: 8, marginBottom: shouldShowFreeform ? 12 : 0 }}>
                       {options.map((option, optionIndex) => {
                         const active = selectedIndex === optionIndex;
-                        const label = option.label === "__other__" ? "Other" : option.label;
+                        const label = option.label === "__other__" ? t('aiPanel.other') : option.label;
                         return (
                           <TouchableOpacity
                             key={`${label}:${optionIndex}`}
@@ -2117,7 +2124,7 @@ function QuestionDialog({ questionRequest, colors, radius, fonts, onSubmit, onRe
                     <TextInput
                       value={freeformAnswers[questionIndex] || ""}
                       onChangeText={(value) => setFreeformAnswers((prev) => ({ ...prev, [questionIndex]: value }))}
-                      placeholder="Type your answer"
+                      placeholder={t('aiPanel.answerPlaceholder')}
                       placeholderTextColor={colors.fg.muted}
                       multiline={!question?.isSecret}
                       secureTextEntry={!!question?.isSecret}
@@ -2142,7 +2149,7 @@ function QuestionDialog({ questionRequest, colors, radius, fonts, onSubmit, onRe
                 style={[styles.permissionBtn, { backgroundColor: colors.bg.raised, borderRadius: radius.sm }]}
                 activeOpacity={0.7}
               >
-                <Text style={{ color: colors.fg.default, fontSize: 13, fontFamily: fonts.sans.semibold }}>Dismiss</Text>
+                <Text style={{ color: colors.fg.default, fontSize: 13, fontFamily: fonts.sans.semibold }}>{t('aiPanel.dismiss')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleSubmit}
@@ -2150,7 +2157,7 @@ function QuestionDialog({ questionRequest, colors, radius, fonts, onSubmit, onRe
                 activeOpacity={0.7}
                 disabled={!canSubmit}
               >
-                <Text style={{ color: '#ffffff', fontSize: 13, fontFamily: fonts.sans.semibold }}>Submit</Text>
+                <Text style={{ color: '#ffffff', fontSize: 13, fontFamily: fonts.sans.semibold }}>{t('aiPanel.submit')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -2171,6 +2178,7 @@ function ApiKeySetup({ providers, colors, radius, fonts, onSetKey }: {
   fonts: any;
   onSetKey: (providerId: string, key: string) => void;
 }) {
+  const { t } = useTranslation();
   const [selectedProvider, setSelectedProvider] = useState<string>(providers[0]?.id || "");
   const [keyInput, setKeyInput] = useState("");
 
@@ -2211,7 +2219,7 @@ function ApiKeySetup({ providers, colors, radius, fonts, onSetKey }: {
           backgroundColor: colors.bg.raised, borderRadius: radius.sm,
           color: colors.fg.default, fontSize: 13, fontFamily: fonts.mono.regular,
         }}
-        placeholder="Paste API key here..."
+        placeholder={t('aiPanel.apiKeyPlaceholder')}
         placeholderTextColor={colors.fg.subtle}
         value={keyInput}
         onChangeText={setKeyInput}
@@ -2269,8 +2277,9 @@ function ConfigureSheet({
   colors: any;
   fonts: any;
 }) {
+  const { t } = useTranslation();
   return (
-    <InfoSheet visible={visible} onClose={onClose} title="Model" description="Select a model">
+    <InfoSheet visible={visible} onClose={onClose} title={t('aiPanel.modelTitle')} description={t('aiPanel.modelDesc')}>
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 0, paddingBottom: 48, gap: 12 }}
         keyboardDismissMode="on-drag"
@@ -2312,7 +2321,7 @@ function ConfigureSheet({
           }) : (
             <View style={[styles.backendOption, { backgroundColor: colors.bg.raised, borderRadius: 10, opacity: 0.7 }]}>
               <Text style={{ color: colors.fg.muted, fontSize: 12, fontFamily: fonts.sans.regular }}>
-                {backend === "codex" ? "Auto" : "No models available"}
+                {backend === "codex" ? t('aiPanel.modelAuto') : t('aiPanel.modelNone')}
               </Text>
             </View>
           )}
@@ -2331,10 +2340,10 @@ function formatCount(value: unknown): string | undefined {
 
 function modelBadges(model: AIModel, isDefault: boolean): string[] {
   const badges: string[] = [];
-  if (isDefault) badges.push("Default");
-  if (model.capabilities?.reasoning || model.supportedReasoningEfforts?.length || model.variants) badges.push("Reasoning");
-  if (model.capabilities?.attachment) badges.push("Files");
-  if (model.options?.serviceTier || model.id.toLowerCase().includes("fast")) badges.push("Fast");
+  if (isDefault) badges.push(i18n.t('aiPanel.badgeDefault'));
+  if (model.capabilities?.reasoning || model.supportedReasoningEfforts?.length || model.variants) badges.push(i18n.t('aiPanel.badgeReasoning'));
+  if (model.capabilities?.attachment) badges.push(i18n.t('aiPanel.badgeFiles'));
+  if (model.options?.serviceTier || model.id.toLowerCase().includes("fast")) badges.push(i18n.t('aiPanel.badgeFast'));
   return badges;
 }
 
@@ -2376,6 +2385,7 @@ function AttachmentSheet({
   colors: any;
   fonts: any;
 }) {
+  const { t } = useTranslation();
   const labelStyle = {
     color: colors.fg.default,
     fontSize: 14,
@@ -2393,7 +2403,7 @@ function AttachmentSheet({
   };
 
   return (
-    <InfoSheet visible={visible} onClose={onClose} title="Attach" description="Add context">
+    <InfoSheet visible={visible} onClose={onClose} title={t('aiPanel.attachTitle')} description={t('aiPanel.attachDesc')}>
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 0, paddingBottom: 48, gap: 12 }}
         keyboardDismissMode="on-drag"
@@ -2408,7 +2418,7 @@ function AttachmentSheet({
             <View style={iconSlotStyle}>
               <Foundation name="photo" size={16} color={colors.fg.default} />
             </View>
-            <Text style={labelStyle}>Select from Gallery</Text>
+            <Text style={labelStyle}>{t('aiPanel.attachGallery')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={onCamera}
@@ -2418,7 +2428,7 @@ function AttachmentSheet({
             <View style={iconSlotStyle}>
               <Feather name="camera" size={16} color={colors.fg.default} />
             </View>
-            <Text style={labelStyle}>Take Photo</Text>
+            <Text style={labelStyle}>{t('aiPanel.attachCamera')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={onFile}
@@ -2428,7 +2438,7 @@ function AttachmentSheet({
             <View style={iconSlotStyle}>
               <Fontisto name="paperclip" size={13} color={colors.fg.default} />
             </View>
-            <Text style={labelStyle}>Choose File</Text>
+            <Text style={labelStyle}>{t('aiPanel.attachFile')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -2471,9 +2481,10 @@ function TuneSheet({
   colors: any;
   fonts: any;
 }) {
+  const { t } = useTranslation();
   const permissionOptions: Array<{ id: NonNullable<CodexPromptOptions["permissionMode"]>; label: string }> = [
-    { id: "default", label: "Default" },
-    { id: "full-access", label: "Full Access" },
+    { id: "default", label: t('aiPanel.permissionDefault') },
+    { id: "full-access", label: t('aiPanel.permissionFullAccess') },
   ];
 
   const sectionStyle = { marginBottom: 20, width: "100%" as const, alignSelf: "stretch" as const };
@@ -2513,7 +2524,7 @@ function TuneSheet({
   );
 
   return (
-    <InfoSheet visible={visible} onClose={onClose} title="Configure" description="AI parameters">
+    <InfoSheet visible={visible} onClose={onClose} title={t('aiPanel.configureTitle')} description={t('aiPanel.configureDesc')}>
       <ScrollView
         style={{ width: "100%" }}
         contentContainerStyle={{ paddingBottom: 48 }}
@@ -2523,7 +2534,7 @@ function TuneSheet({
         <View style={{ width: "100%" }}>
           {/* Mode */}
           <View style={sectionStyle}>
-            <Text style={sectionLabelStyle}>Mode</Text>
+            <Text style={sectionLabelStyle}>{t('aiPanel.configureMode')}</Text>
             {renderOptionGroup(
               agents.map((agent) => ({ id: agent.id, label: agent.name })),
               selectedAgent,
@@ -2536,7 +2547,7 @@ function TuneSheet({
               {/* Reasoning */}
               {reasoningOptions.length > 0 && (
                 <View style={sectionStyle}>
-                  <Text style={sectionLabelStyle}>Reasoning</Text>
+                  <Text style={sectionLabelStyle}>{t('aiPanel.configureReasoning')}</Text>
                   {renderOptionGroup(
                     reasoningOptions.map((opt) => ({ id: opt.id, label: opt.label })),
                     reasoningEffort,
@@ -2548,7 +2559,7 @@ function TuneSheet({
               {/* Speed */}
               {backend === "codex" && speedOptions.length > 1 && (
                 <View style={sectionStyle}>
-                  <Text style={sectionLabelStyle}>Speed</Text>
+                  <Text style={sectionLabelStyle}>{t('aiPanel.configureSpeed')}</Text>
                   {renderOptionGroup(
                     speedOptions.map((opt) => ({ id: opt.id, label: opt.label })),
                     speed,
@@ -2560,7 +2571,7 @@ function TuneSheet({
               {/* Permissions */}
               {backend === "codex" && (
                 <View style={sectionStyle}>
-                  <Text style={sectionLabelStyle}>Permission</Text>
+                  <Text style={sectionLabelStyle}>{t('aiPanel.configurePermission')}</Text>
                   {renderOptionGroup(
                     permissionOptions.map((opt) => ({ id: opt.id, label: opt.label })),
                     permissionMode,
@@ -2672,6 +2683,7 @@ const AnimatedAITab = memo(
 // ============================================================================
 
 export default function AIPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) {
+  const { t } = useTranslation();
   const { colors, radius, fonts } = useTheme();
   const { settings } = useAppSettings();
   const headerHeight = useHeaderHeight();
@@ -2869,7 +2881,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
     if (activeBackend !== "codex") return [];
     const tiers = selectedModelInfo?.additionalSpeedTiers ?? [];
     return [
-      { id: "default", label: "Default" },
+      { id: "default", label: t('common.default') },
       ...tiers.map((tier) => ({
         id: tier,
         label: tier.charAt(0).toUpperCase() + tier.slice(1),
@@ -3039,7 +3051,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
 
               return mergeSessionTabs(prev, [{
                 id: sessId,
-                title: title || "Conversation",
+                title: title || t('aiPanel.defaultConversationTitle'),
                 backend,
                 time: {
                   created: Date.now(),
@@ -3110,16 +3122,16 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
             setSessionActivityLabels((prev) => {
               const current = prev[sessId];
               if (
-                current === "Searching codebase..."
-                || current === "Waiting for approval..."
-                || current === "Waiting for input..."
-                || current === "Stopping..."
+                current === i18n.t('aiPanel.activitySearching')
+                || current === i18n.t('aiPanel.activityWaitingApproval')
+                || current === i18n.t('aiPanel.activityWaitingInput')
+                || current === i18n.t('aiPanel.activityStopping')
               ) {
                 return prev;
               }
               return {
                 ...prev,
-                [sessId]: "Thinking...",
+                [sessId]: i18n.t('aiPanel.activityThinking'),
               };
             });
           }
@@ -3150,7 +3162,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
                 return next;
               });
             }
-            setSessionActivityLabels((prev) => ({ ...prev, [sessId]: "Done" }));
+            setSessionActivityLabels((prev) => ({ ...prev, [sessId]: i18n.t('aiPanel.activityDone') }));
             // Codex streams partial deltas; after completion force a canonical
             // re-read so final rendering is clean and fully normalized.
             if (backend === "codex" && !codexFinalSyncInFlightRef.current.has(sessId)) {
@@ -3175,7 +3187,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
         case "permission.updated": {
           const sessId = (props.sessionID as string) || (props.sessionId as string);
           if (sessId) {
-            setSessionActivityLabels((prev) => ({ ...prev, [sessId]: "Waiting for approval..." }));
+            setSessionActivityLabels((prev) => ({ ...prev, [sessId]: i18n.t('aiPanel.activityWaitingApproval') }));
           }
           setPendingPermission(props as unknown as AIPermission);
           break;
@@ -3183,7 +3195,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
         case "permission.replied": {
           const sessId = (props.sessionID as string) || (props.sessionId as string);
           if (sessId) {
-            setSessionActivityLabels((prev) => ({ ...prev, [sessId]: "Working..." }));
+            setSessionActivityLabels((prev) => ({ ...prev, [sessId]: i18n.t('aiPanel.activityWorking') }));
           }
           setPendingPermission(null);
           break;
@@ -3196,7 +3208,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
                 ? prev
                 : { ...prev, [sessId]: true }
             ));
-            setSessionActivityLabels((prev) => ({ ...prev, [sessId]: "Waiting for input..." }));
+            setSessionActivityLabels((prev) => ({ ...prev, [sessId]: i18n.t('aiPanel.activityWaitingInput') }));
           }
           setPendingQuestion(props as unknown as AIQuestion);
           break;
@@ -3210,7 +3222,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
                 ? prev
                 : { ...prev, [sessId]: true }
             ));
-            setSessionActivityLabels((prev) => ({ ...prev, [sessId]: "Working..." }));
+            setSessionActivityLabels((prev) => ({ ...prev, [sessId]: i18n.t('aiPanel.activityWorking') }));
           }
           setPendingQuestion(null);
           break;
@@ -3218,7 +3230,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
         case "session.error":
         case "prompt_error": {
           const rawErr = props.error;
-          const errMsg = typeof rawErr === 'string' ? rawErr : (rawErr && typeof rawErr === 'object' ? ((rawErr as any).message || (rawErr as any).name || JSON.stringify(rawErr)) : null) || "An error occurred";
+          const errMsg = typeof rawErr === 'string' ? rawErr : (rawErr && typeof rawErr === 'object' ? ((rawErr as any).message || (rawErr as any).name || JSON.stringify(rawErr)) : null) || t('aiPanel.anErrorOccurred');
           const sessId = (props.sessionID as string) || (props.sessionId as string);
           if (sessId) {
             if (stoppingSessionIdsRef.current.has(sessId) && isAbortLikeError(rawErr)) {
@@ -3231,13 +3243,13 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
               delete next[sessId];
               return next;
             });
-            setSessionActivityLabels((prev) => ({ ...prev, [sessId]: "Error" }));
+            setSessionActivityLabels((prev) => ({ ...prev, [sessId]: i18n.t('aiPanel.activityError') }));
             setErrorMessages((prev) => ({
               ...prev,
               [sessId]: [...(prev[sessId] || []), errMsg],
             }));
           } else {
-            Alert.alert("AI Error", errMsg);
+            Alert.alert(i18n.t('aiPanel.aiError'), errMsg);
           }
           break;
         }
@@ -3572,7 +3584,7 @@ export default function AIPanel({ instanceId, isActive, bottomBarHeight }: Plugi
   );
   const currentErrors = activeMessageBucketId ? errorMessages[activeMessageBucketId] || [] : [];
 const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.name
-    || (activeBackend === "codex" ? "Auto" : "Select model");
+    || (activeBackend === "codex" ? t('aiPanel.modelAuto') : t('aiPanel.modelSelect'));
   const selectedModelName = truncateButtonLabel(selectedModelNameFull);
   const combinedConfigLabel = selectedModelName;
   useEffect(() => {
@@ -3703,12 +3715,12 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
           const deleted = await ai.deleteSession(tab.sessionId, tab.backend);
           if (!deleted) {
             setSessionTabs((prev) => [...prev, tab]);
-            Alert.alert("Unable to Delete", "The session could not be deleted.");
+            Alert.alert(t('aiPanel.unableDelete'), "The session could not be deleted.");
           }
         } catch (err) {
           setSessionTabs((prev) => [...prev, tab]);
           const message = err instanceof Error ? err.message : "The session could not be deleted.";
-          Alert.alert("Unable to Delete", message);
+          Alert.alert(t('aiPanel.unableDelete'), message);
         }
       })();
     }
@@ -3716,12 +3728,12 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
 
   const closeTab = useCallback((tabId: string) => {
     Alert.alert(
-      "Delete Session",
-      "Are you sure you want to delete this session?",
+      t('aiPanel.deleteSessionTitle'),
+      t('aiPanel.deleteSessionDesc'),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t('common.cancel'), style: "cancel" },
         {
-          text: "Delete",
+          text: t('common.delete'),
           style: "destructive",
           onPress: () => deleteTab(tabId),
         },
@@ -3751,8 +3763,8 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
         setSessionTabs((prev) => prev.map((t) => (
           t.id === tabId ? { ...t, title: previousTitle } : t
         )));
-        const message = err instanceof Error ? err.message : "Failed to rename session";
-        Alert.alert("Rename Failed", message);
+        const message = err instanceof Error ? err.message : t('aiPanel.failedRenameSession');
+        Alert.alert(t('aiPanel.renameFailed'), message);
       }
     })();
   };
@@ -3979,7 +3991,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert("Photos Permission", "Photo library permission is required to upload images.");
+        Alert.alert(t('aiPanel.photosPermTitle'), t('aiPanel.photosPermDesc'));
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -4001,7 +4013,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
       setPendingImage({ type: "file", mime, filename, url: `data:${mime};base64,${base64}` });
     } catch (err) {
       console.error("Gallery pick error:", err);
-      Alert.alert("Error", "Failed to pick image");
+      Alert.alert(t('common.error'), t('aiPanel.failedPickImage'));
     }
   }, []);
 
@@ -4010,7 +4022,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert("Camera Permission", "Camera permission is required to take photos.");
+        Alert.alert(t('aiPanel.cameraPermTitle'), t('aiPanel.cameraPermDesc'));
         return;
       }
       const result = await ImagePicker.launchCameraAsync({
@@ -4027,7 +4039,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
       setPendingImage({ type: "file", mime, filename, url: `data:${mime};base64,${base64}` });
     } catch (err) {
       console.error("Camera error:", err);
-      Alert.alert("Error", "Failed to take photo");
+      Alert.alert(t('common.error'), t('aiPanel.failedTakePhoto'));
     }
   }, []);
 
@@ -4043,7 +4055,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
       setPendingImage({ type: "file", mime, filename, url: `data:${mime};base64,${base64}` });
     } catch (err) {
       console.error("Document pick error:", err);
-      Alert.alert("Error", "Failed to pick file");
+      Alert.alert(t('common.error'), t('aiPanel.failedPickFile'));
     }
   }, []);
 
@@ -4051,7 +4063,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert("Photos Permission", "Photo library permission is required to upload images.");
+        Alert.alert(t('aiPanel.photosPermTitle'), t('aiPanel.photosPermDesc'));
         return;
       }
 
@@ -4084,7 +4096,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
       });
     } catch (err) {
       console.error("Image pick error:", err);
-      Alert.alert("Error", "Failed to pick image");
+      Alert.alert(t('common.error'), t('aiPanel.failedPickImage'));
     }
   }, []);
 
@@ -4217,7 +4229,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
         if (isBackendUnavailableError(message)) {
           showBackendMissingInstallAlert(messageBackend);
         } else {
-          Alert.alert("Error", "Failed to create AI session");
+          Alert.alert(t('common.error'), t('aiPanel.failedCreateSession'));
         }
         return null;
       }
@@ -4233,7 +4245,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
         switch (cmd) {
           case "undo": {
             if (messageBackend === "codex") {
-              throw new Error("Codex undo is not supported in Lunel yet");
+              throw new Error(t('aiPanel.codexUndoNotSupported'));
             }
             const msgs = messagesMap[ensured] || [];
             const lastUserMsg = [...msgs].reverse().find((m) => m.role === "user");
@@ -4242,7 +4254,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
           }
           case "redo":
             if (messageBackend === "codex") {
-              throw new Error("Codex redo is not supported in Lunel yet");
+              throw new Error(t('aiPanel.codexRedoNotSupported'));
             }
             await ai.unrevert(ensured, messageBackend);
             break;
@@ -4251,7 +4263,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
             break;
           case "init":
             if (messageBackend === "codex") {
-              throw new Error("Codex init is not supported in Lunel yet");
+              throw new Error(t('aiPanel.codexInitNotSupported'));
             }
             await ai.runCommand(ensured, "init", messageBackend);
             break;
@@ -4265,11 +4277,11 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
               undefined,
               getCodexPromptOptions(),
             );
-            setSessionActivityLabels((prev) => ({ ...prev, [ensured]: "Thinking..." }));
+            setSessionActivityLabels((prev) => ({ ...prev, [ensured]: i18n.t('aiPanel.activityThinking') }));
             setStreamingBySession((prev) => ({ ...prev, [ensured]: true }));
         }
       } catch (err) {
-        Alert.alert("Error", (err as Error).message);
+        Alert.alert(t('common.error'), (err as Error).message);
       }
       return;
     }
@@ -4308,7 +4320,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
       setShowScrollToBottom(false);
       const optimisticBucketId = sessId ?? localDraftTabId;
       if (!optimisticBucketId) {
-        Alert.alert("Error", "Failed to prepare AI session");
+        Alert.alert(t('common.error'), t('aiPanel.failedPrepareSession'));
         return;
       }
       setMessagesMap((prev) => ({
@@ -4356,7 +4368,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
         };
         return { ...prev, [committedBucketId]: updated };
       });
-      setSessionActivityLabels((prev) => ({ ...prev, [ensured]: "Thinking..." }));
+      setSessionActivityLabels((prev) => ({ ...prev, [ensured]: i18n.t('aiPanel.activityThinking') }));
       setStreamingBySession((prev) => ({ ...prev, [ensured]: true }));
       setPendingImage(null);
     } catch (err) {
@@ -4367,7 +4379,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
           [fallbackBucketId]: (prev[fallbackBucketId] || []).filter((msg) => !msg.id.startsWith("opt-")),
         }));
       }
-      Alert.alert("Error", (err as Error).message);
+      Alert.alert(t('common.error'), (err as Error).message);
     }
   };
 
@@ -4464,7 +4476,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
       const permission = await Audio.requestPermissionsAsync();
       if (!permission.granted) {
         setIsVoiceMode(false);
-        Alert.alert("Microphone Permission", "Microphone permission is required for voice input. Voice is sent to our servers for transcription only — we don't store or log it.");
+        Alert.alert(t('aiPanel.micPermTitle'), t('aiPanel.micPermDesc'));
         return;
       }
       await Audio.setAudioModeAsync({
@@ -4491,7 +4503,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
     } catch (err) {
       console.error("Voice recording start error:", err);
       setIsVoiceMode(false);
-      Alert.alert("Voice Input", "Failed to start recording.");
+      Alert.alert(t('aiPanel.voiceInputTitle'), t('aiPanel.failedStartRecording'));
       resetEqualizer();
     }
   }, [
@@ -4512,7 +4524,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
     try {
       const uri = await stopRecording();
       if (!uri) {
-        Alert.alert("Voice Input", "No audio recording found.");
+        Alert.alert(t('aiPanel.voiceInputTitle'), t('aiPanel.noAudioRecording'));
         return;
       }
       const audioBase64 = await FileSystem.readAsStringAsync(uri, {
@@ -4529,13 +4541,13 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
       const data = (await res.json()) as { text?: string };
       const transcribed = (data.text || "").trim();
       if (!transcribed) {
-        Alert.alert("Voice Input", "No speech detected.");
+        Alert.alert(t('aiPanel.voiceInputTitle'), t('aiPanel.noSpeechDetected'));
         return;
       }
       setInputText(transcribed);
     } catch (err) {
       console.error("Voice transcription error:", err);
-      Alert.alert("Voice Input", (err as Error).message || "Failed to transcribe audio.");
+      Alert.alert(t('aiPanel.voiceInputTitle'), (err as Error).message || t('aiPanel.failedTranscribe'));
     } finally {
       setIsVoiceMode(false);
       setIsVoiceBusy(false);
@@ -4604,14 +4616,14 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
       setNeedsApiKeyByBackend((prev) => ({ ...prev, [activeBackend]: false }));
       setIsInitialized(false);
     } catch (err) {
-      Alert.alert("Error", (err as Error).message);
+      Alert.alert(t('common.error'), (err as Error).message);
     }
   };
 
   // Build flat list data: messages + errors
   const activeSessionActivityLabel = activeSessionId
-    ? (sessionActivityLabels[activeSessionId] || "Thinking...")
-    : "Thinking...";
+    ? (sessionActivityLabels[activeSessionId] || t('aiPanel.activityThinking'))
+    : t('aiPanel.activityThinking');
 
   const listData = useMemo(() => {
     const items: Array<
@@ -4758,16 +4770,16 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
       <InfoSheet
         visible={backendPickerVisible}
         onClose={() => setBackendPickerVisible(false)}
-        title="New Session"
-        description="Choose an AI backend to start a new session"
+        title={t('aiPanel.newSessionTitle')}
+        description={t('aiPanel.newSessionDesc')}
       >
         <View style={{ gap: 6, paddingBottom: 16 }}>
           {[
-            { backend: "codex" as const, label: "Codex", description: "OpenAI Codex CLI", Icon: Codex },
-            { backend: "opencode" as const, label: "OpenCode", description: "The open source AI coding agent", Icon: OpenCode },
-            { label: "Claude Code", description: "Coming soon", disabled: true, Icon: ClaudeCode },
-            { label: "Gemini", description: "Coming soon", disabled: true, Icon: Gemini },
-            { label: "Cursor", description: "Coming soon", disabled: true, Icon: Cursor },
+            { backend: "codex" as const, label: "Codex", description: t('aiPanel.codexDesc'), Icon: Codex },
+            { backend: "opencode" as const, label: "OpenCode", description: t('aiPanel.opencodeDesc'), Icon: OpenCode },
+            { label: "Claude Code", description: t('aiPanel.comingSoon'), disabled: true, Icon: ClaudeCode },
+            { label: "Gemini", description: t('aiPanel.comingSoon'), disabled: true, Icon: Gemini },
+            { label: "Cursor", description: t('aiPanel.comingSoon'), disabled: true, Icon: Cursor },
           ].map(({ backend, label, description, disabled, Icon }) => (
             <TouchableOpacity
               key={backend ?? label}
@@ -4827,12 +4839,12 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
               actions={[
                 {
                   id: "toggle-detailed-view",
-                  title: "Toggle detailed view",
+                  title: t('aiPanel.menuToggleView'),
                   state: showDetailedView ? "on" : "off",
                 },
                 ...(activeTab ? [{
                   id: "delete-session",
-                  title: "Delete session",
+                  title: t('aiPanel.menuDeleteSession'),
                   attributes: {
                     destructive: true,
                   } as const,
@@ -4874,7 +4886,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
             <View style={{ alignItems: "center", gap: 8 }}>
               <Sparkle size={48} color={colors.fg.muted} strokeWidth={1.5} />
               <Text style={{ color: colors.fg.muted, fontSize: 16, fontFamily: fonts.sans.regular }}>
-                No AI sessions open
+                {t('aiPanel.emptyNoSessions')}
               </Text>
             </View>
             <TouchableOpacity
@@ -4894,7 +4906,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
                   fontFamily: fonts.sans.medium,
                 }}
               >
-                New Session
+                {t('aiPanel.newSessionTitle')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -4964,7 +4976,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
                       : <OpenCode size={68} color={colors.fg.default} />}
                   </View>
                   <Text style={{ color: colors.fg.muted, fontSize: 17, fontFamily: "PublicSans_500Medium", textAlign: "center", marginTop: 14, paddingHorizontal: 24 }}>
-                    What's the plan today? I'm in.
+                    {t('aiPanel.welcomeMessage')}
                   </Text>
                 </View>
               </Pressable>
@@ -5002,7 +5014,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
                   {workspaceFilesLoading && workspaceFileMatches.length === 0 ? (
                     <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12, gap: 10 }}>
                       <ActivityIndicator size="small" color={colors.fg.subtle} />
-                      <Text style={{ color: colors.fg.subtle, fontFamily: fonts.sans.regular, fontSize: 13 }}>Loading files...</Text>
+                      <Text style={{ color: colors.fg.subtle, fontFamily: fonts.sans.regular, fontSize: 13 }}>{t('aiPanel.loadingFiles')}</Text>
                     </View>
                   ) : (
                     <ScrollView
@@ -5073,7 +5085,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
                     fontFamily: fonts.sans.regular,
                   },
                 ]}
-                placeholder="Ask, Plan, @ for file context"
+                placeholder={t('aiPanel.inputPlaceholder')}
                 placeholderTextColor={colors.fg.subtle}
                 value={inputText}
                 editable={!isVoiceMode}
@@ -5272,7 +5284,7 @@ const selectedModelNameFull = modelOptions.find((m) => m.id === selectedModel)?.
                   }}
                 >
                   <ArrowDownIcon size={16} color={colors.fg.muted} />
-                  <Text style={{ color: colors.fg.muted, fontSize: 12, fontFamily: fonts.sans.regular }}>To the bottom</Text>
+                  <Text style={{ color: colors.fg.muted, fontSize: 12, fontFamily: fonts.sans.regular }}>{t('aiPanel.scrollToBottom')}</Text>
                 </Pressable>
               </Animated.View>
             ) : null}

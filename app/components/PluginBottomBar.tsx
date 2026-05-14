@@ -28,6 +28,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePlugins } from "@/plugins";
+import { useTranslation } from "react-i18next";
 
 const WORKSPACE_STORAGE_KEY = "@lunel_workspace";
 
@@ -87,6 +88,7 @@ const NavItem = memo(function NavItem({
   labelStyle: object;
 }) {
   const { Icon } = item;
+  const { t } = useTranslation();
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -95,7 +97,7 @@ const NavItem = memo(function NavItem({
     >
       <Icon size={23} color={isActive ? activeColor : inactiveColor} strokeWidth={1.75} />
       <Text style={[styles.label, labelStyle, { color: isActive ? activeColor : inactiveColor }]}>
-        {item.label}
+        {t(`nav.${item.id}`)}
       </Text>
     </TouchableOpacity>
   );
@@ -106,6 +108,7 @@ export default function PluginBottomBar({
   setActiveTab,
 }: PluginBottomBarProps) {
   const { colors, fonts } = useTheme();
+  const { t } = useTranslation();
   const { getPlugin } = usePlugins();
   const { bottom: bottomInset } = useSafeAreaInsets();
 
@@ -299,7 +302,7 @@ export default function PluginBottomBar({
                         { fontFamily: fonts.sans.medium, color: isActive ? colors.fg.default : colors.fg.muted },
                       ]}
                     >
-                      {plugin.name}
+                      {t(`nav.${plugin.id}`)}
                     </Text>
                   </TouchableOpacity>
                 );

@@ -4,6 +4,7 @@ import Header, { useHeaderHeight } from "@/components/Header";
 import { Check } from "lucide-react-native";
 import { Stack, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { useTranslation } from "react-i18next";
 import React from "react";
 import {
   ScrollView,
@@ -100,6 +101,7 @@ export default function BrainrotSettingsPage() {
   const { settings, updateSetting } = useAppSettings();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
+  const { t } = useTranslation();
   const needsWebviewLoginNotice =
     settings.brainrotSource === "instagram"
     || settings.brainrotSource === "x"
@@ -108,16 +110,16 @@ export default function BrainrotSettingsPage() {
   return (
     <View style={[styles.container, { backgroundColor: colors.bg.base }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <Header title="Brainrot" colors={colors} onBack={() => router.back()} />
+      <Header title={t('settingsBrainrot.title')} colors={colors} onBack={() => router.back()} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
         <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: typography.caption }]}>
-          SOURCE
+          {t('settingsBrainrot.source')}
         </Text>
         <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 10 }]}>
           <SourceOptionRow
-            label="YouTube"
-            description="Open YouTube Shorts by default"
+            label={t('settingsBrainrot.youtube')}
+            description={t('settingsBrainrot.youtubeDesc')}
             selected={settings.brainrotSource === "youtube"}
             onPress={() => {
               void updateSetting("brainrotSource", "youtube");
@@ -125,8 +127,8 @@ export default function BrainrotSettingsPage() {
           />
           <View style={[styles.divider, { backgroundColor: colors.border.tertiary }]} />
           <SourceOptionRow
-            label="Instagram"
-            description="Open Instagram Reels by default"
+            label={t('settingsBrainrot.instagram')}
+            description={t('settingsBrainrot.instagramDesc')}
             selected={settings.brainrotSource === "instagram"}
             onPress={() => {
               void updateSetting("brainrotSource", "instagram");
@@ -134,8 +136,8 @@ export default function BrainrotSettingsPage() {
           />
           <View style={[styles.divider, { backgroundColor: colors.border.tertiary }]} />
           <SourceOptionRow
-            label="X.com"
-            description="Open X by default"
+            label={t('settingsBrainrot.xcom')}
+            description={t('settingsBrainrot.xcomDesc')}
             selected={settings.brainrotSource === "x"}
             onPress={() => {
               void updateSetting("brainrotSource", "x");
@@ -143,8 +145,8 @@ export default function BrainrotSettingsPage() {
           />
           <View style={[styles.divider, { backgroundColor: colors.border.tertiary }]} />
           <SourceOptionRow
-            label="TikTok"
-            description="Open TikTok by default"
+            label={t('settingsBrainrot.tiktok')}
+            description={t('settingsBrainrot.tiktokDesc')}
             selected={settings.brainrotSource === "tiktok"}
             onPress={() => {
               void updateSetting("brainrotSource", "tiktok");
@@ -160,19 +162,19 @@ export default function BrainrotSettingsPage() {
               ]}
             >
               <Text style={[styles.noteText, { color: colors.fg.muted, fontFamily: fonts.sans.regular, fontSize: typography.caption }]}>
-                You may have to log in once in the plugin for this source.
+                {t('settingsBrainrot.webviewLogin')}
               </Text>
             </View>
           ) : null}
         </View>
 
         <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: typography.caption }]}>
-          INTEGRATION
+          {t('settingsBrainrot.integration')}
         </Text>
         <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 10 }]}>
           <ToggleRow
-            label="AI Chat Integration"
-            description="Show Brainrot while AI is processing, then return to AI chat"
+            label={t('settingsBrainrot.aiChatIntegration')}
+            description={t('settingsBrainrot.aiChatIntegrationDesc')}
             value={settings.brainrotAiChatIntegration}
             onValueChange={(value) => {
               void updateSetting("brainrotAiChatIntegration", value);

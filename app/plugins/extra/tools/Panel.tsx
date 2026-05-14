@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ScrollView,
   Text,
@@ -57,6 +58,7 @@ interface Tool {
 }
 
 function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) {
+  const { t } = useTranslation();
   const { colors, fonts, spacing, radius } = useTheme();
   const headerHeight = useHeaderHeight();
   const { height: keyboardHeightSV } = useReanimatedKeyboardAnimation();
@@ -155,7 +157,7 @@ function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps)
     // Format tools
     {
       id: 'json-format',
-      label: 'Format JSON',
+      label: t('tools.formatJson'),
       category: ['format'],
       icon: Code,
       action: async (input) => gPI.tools.formatJson(input),
@@ -163,14 +165,14 @@ function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps)
     },
     {
       id: 'json-minify',
-      label: 'Minify JSON',
+      label: t('tools.minifyJson'),
       category: ['format'],
       icon: Minimize2,
       action: async (input) => JSON.stringify(JSON.parse(input)),
     },
     {
       id: 'xml-format',
-      label: 'Format XML',
+      label: t('tools.formatXml'),
       category: ['format'],
       icon: FileText,
       action: async (input) => gPI.tools.formatXml(input),
@@ -179,28 +181,28 @@ function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps)
     // Encode tools
     {
       id: 'base64-encode',
-      label: 'Base64 Encode',
+      label: t('tools.base64Encode'),
       category: ['encode'],
       icon: Lock,
       action: async (input) => gPI.tools.base64Encode(input),
     },
     {
       id: 'base64-decode',
-      label: 'Base64 Decode',
+      label: t('tools.base64Decode'),
       category: ['encode'],
       icon: LockOpen,
       action: async (input) => gPI.tools.base64Decode(input),
     },
     {
       id: 'url-encode',
-      label: 'URL Encode',
+      label: t('tools.urlEncode'),
       category: ['encode'],
       icon: Link2,
       action: async (input) => gPI.tools.urlEncode(input),
     },
     {
       id: 'url-decode',
-      label: 'URL Decode',
+      label: t('tools.urlDecode'),
       category: ['encode'],
       icon: Unlink,
       action: async (input) => gPI.tools.urlDecode(input),
@@ -208,28 +210,28 @@ function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps)
     // Hash tools
     {
       id: 'hash-md5',
-      label: 'MD5',
+      label: t('tools.md5'),
       category: ['hash'],
       icon: Fingerprint,
       action: async (input) => gPI.tools.hash(input, 'md5'),
     },
     {
       id: 'hash-sha1',
-      label: 'SHA-1',
+      label: t('tools.sha1'),
       category: ['hash'],
       icon: Fingerprint,
       action: async (input) => gPI.tools.hash(input, 'sha1'),
     },
     {
       id: 'hash-sha256',
-      label: 'SHA-256',
+      label: t('tools.sha256'),
       category: ['hash'],
       icon: Fingerprint,
       action: async (input) => gPI.tools.hash(input, 'sha256'),
     },
     {
       id: 'hash-sha512',
-      label: 'SHA-512',
+      label: t('tools.sha512'),
       category: ['hash'],
       icon: Fingerprint,
       action: async (input) => gPI.tools.hash(input, 'sha512'),
@@ -237,42 +239,42 @@ function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps)
     // String tools
     {
       id: 'string-lower',
-      label: 'lowercase',
+      label: t('tools.lowercase'),
       category: ['string'],
       icon: Type,
       action: async (input) => gPI.tools.stringOps(input, 'lowercase'),
     },
     {
       id: 'string-upper',
-      label: 'UPPERCASE',
+      label: t('tools.uppercase'),
       category: ['string'],
       icon: Type,
       action: async (input) => gPI.tools.stringOps(input, 'uppercase'),
     },
     {
       id: 'string-capitalize',
-      label: 'Capitalize',
+      label: t('tools.capitalize'),
       category: ['string'],
       icon: Type,
       action: async (input) => gPI.tools.stringOps(input, 'capitalize'),
     },
     {
       id: 'string-reverse',
-      label: 'Reverse',
+      label: t('tools.reverse'),
       category: ['string'],
       icon: ArrowLeftRight,
       action: async (input) => gPI.tools.stringOps(input, 'reverse'),
     },
     {
       id: 'string-trim',
-      label: 'Trim',
+      label: t('tools.trim'),
       category: ['string'],
       icon: Scissors,
       action: async (input) => gPI.tools.stringOps(input, 'trim'),
     },
     {
       id: 'string-slug',
-      label: 'Slugify',
+      label: t('tools.slugify'),
       category: ['string'],
       icon: Minus,
       action: async (input) => gPI.tools.stringOps(input, 'slug'),
@@ -280,7 +282,7 @@ function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps)
     // Time tools
     {
       id: 'time-unix-to-date',
-      label: 'Unix → Date',
+      label: t('tools.unixToDate'),
       category: ['time'],
       icon: Calendar,
       action: async (input) => gPI.tools.unixToDate(parseInt(input)),
@@ -288,7 +290,7 @@ function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps)
     },
     {
       id: 'time-date-to-unix',
-      label: 'Date → Unix',
+      label: t('tools.dateToUnix'),
       category: ['time'],
       icon: Clock,
       action: async (input) => (await gPI.tools.dateToUnix(input)).toString(),
@@ -296,12 +298,12 @@ function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps)
     },
     {
       id: 'time-now',
-      label: 'Now (Unix)',
+      label: t('tools.nowUnix'),
       category: ['time'],
       icon: Timer,
       action: async () => Math.floor(Date.now() / 1000).toString(),
     },
-  ], []);
+  ], [t]);
 
   // Get recent tools
   const recentTools = useMemo(() => {
@@ -335,7 +337,7 @@ function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps)
 
   const runTool = useCallback(async (tool: Tool) => {
     if (!input.trim() && tool.id !== 'time-now') {
-      setError('Enter some input first');
+      setError(t('tools.enterInputFirst'));
       return;
     }
 
@@ -367,12 +369,12 @@ function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps)
   };
 
   const categories: { id: ToolCategory | 'recent'; label: string }[] = [
-    ...(recentToolIds.length > 0 ? [{ id: 'recent' as const, label: 'Recent' }] : []),
-    { id: 'format', label: 'Format' },
-    { id: 'encode', label: 'Encode' },
-    { id: 'hash', label: 'Hash' },
-    { id: 'string', label: 'String' },
-    { id: 'time', label: 'Time' },
+    ...(recentToolIds.length > 0 ? [{ id: 'recent' as const, label: t('tools.catRecent') }] : []),
+    { id: 'format', label: t('tools.catFormat') },
+    { id: 'encode', label: t('tools.catEncode') },
+    { id: 'hash', label: t('tools.catHash') },
+    { id: 'string', label: t('tools.catString') },
+    { id: 'time', label: t('tools.catTime') },
   ];
 
   // Equal split for input/output
@@ -397,7 +399,7 @@ function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps)
   return (
     <Animated.View style={[{ flex: 1, backgroundColor: colors.bg.base }, rootAnimatedStyle]}>
       <Header
-        title="Tools"
+        title={t('nav.tools')}
         colors={colors}
       />
 
@@ -514,7 +516,7 @@ function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps)
               } as any}
               value={input}
               onChangeText={(text) => { setInput(text); setError(''); }}
-              placeholder={selectedTool?.placeholder || 'Paste or type anything...'}
+              placeholder={selectedTool?.placeholder || t('tools.inputPlaceholder')}
               placeholderTextColor={colors.fg.muted}
               multiline
               autoCapitalize="none"
@@ -534,7 +536,7 @@ function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps)
                   </Text>
                 )}
                 <Text style={{ fontSize: typography.caption, fontFamily: fonts.sans.regular, color: colors.fg.subtle }}>
-                  {input.length} chars
+                  {input.length} {t('tools.chars')}
                 </Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
@@ -585,7 +587,7 @@ function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps)
                   }}
                   selectable
                 >
-                  {output || 'Result appears here'}
+                  {output || t('tools.resultPlaceholder')}
                 </Text>
               )}
               <View style={{ height: spacing[4] }} />
@@ -600,11 +602,11 @@ function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps)
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
                 {lastUsedTool && output && (
                   <Text style={{ fontSize: typography.caption, fontFamily: fonts.sans.regular, color: colors.fg.subtle }}>
-                    via {tools.find(t => t.id === lastUsedTool)?.label}
+                    {t('tools.via')} {tools.find(tool => tool.id === lastUsedTool)?.label}
                   </Text>
                 )}
                 <Text style={{ fontSize: typography.caption, fontFamily: fonts.sans.regular, color: colors.fg.subtle }}>
-                  {output.length} chars
+                  {output.length} {t('tools.chars')}
                 </Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
@@ -650,7 +652,7 @@ function ToolsPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps)
               fontFamily: fonts.sans.semibold,
               color: '#fff',
             }}>
-              Convert
+              {t('tools.convert')}
             </Text>
           </TouchableOpacity>
         </View>

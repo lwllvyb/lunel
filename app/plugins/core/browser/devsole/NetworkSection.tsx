@@ -1,6 +1,8 @@
 import { FlashList } from "@shopify/flash-list";
 import * as Clipboard from "expo-clipboard";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useTranslation } from "react-i18next";
+import i18n from "@/lib/i18n";
 import { Copy, Network, Search, Trash2, X } from "lucide-react-native";
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Modal, Pressable, ScrollView, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from "react-native";
@@ -8,7 +10,7 @@ import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming
 import { DevsoleNetworkEntry } from "./types";
 
 function formatDuration(durationMs: number | null) {
-  if (durationMs == null) return "Pending";
+  if (durationMs == null) return i18n.t('browser.networkPending');
   if (durationMs < 1000) return `${durationMs} ms`;
   return `${(durationMs / 1000).toFixed(2)} s`;
 }
@@ -42,6 +44,7 @@ const NetworkRow = memo(function NetworkRow({
   onPress: () => void;
   onReadAllResponse: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors, fonts, radius } = useTheme();
   const statusColor = getStatusColor(item, colors);
   const hasLongResponse =
@@ -106,7 +109,7 @@ const NetworkRow = memo(function NetworkRow({
             <View style={{ borderRadius: radius.md, backgroundColor: colors.bg.base, overflow: "hidden" }}>
               <View style={{ paddingHorizontal: 10, paddingVertical: 6, borderBottomWidth: 0.5, borderBottomColor: colors.border.secondary }}>
                 <Text style={{ color: colors.fg.subtle, fontSize: 9, fontFamily: fonts.sans.semibold, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  Request
+                  {t('browser.networkRequestLabel')}
                 </Text>
               </View>
               <Text style={{ color: colors.fg.default, fontSize: 10, lineHeight: 15, fontFamily: fonts.mono.regular, padding: 10 }}>
@@ -119,7 +122,7 @@ const NetworkRow = memo(function NetworkRow({
             <View style={{ borderRadius: radius.md, backgroundColor: colors.bg.base, overflow: "hidden" }}>
               <View style={{ paddingHorizontal: 10, paddingVertical: 6, borderBottomWidth: 0.5, borderBottomColor: colors.border.secondary }}>
                 <Text style={{ color: colors.fg.subtle, fontSize: 9, fontFamily: fonts.sans.semibold, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  Response
+                  {t('browser.networkResponseLabel')}
                 </Text>
               </View>
               <Text numberOfLines={6} style={{ color: colors.fg.default, fontSize: 10, lineHeight: 15, fontFamily: fonts.mono.regular, padding: 10 }}>
@@ -128,7 +131,7 @@ const NetworkRow = memo(function NetworkRow({
               {hasLongResponse ? (
                 <TouchableOpacity onPress={onReadAllResponse} activeOpacity={0.85} style={{ paddingHorizontal: 10, paddingBottom: 10 }}>
                   <Text style={{ color: colors.accent.default, fontSize: 10, fontFamily: fonts.sans.medium }}>
-                    Read full response →
+                    {t('browser.networkReadFull')}
                   </Text>
                 </TouchableOpacity>
               ) : null}
@@ -139,7 +142,7 @@ const NetworkRow = memo(function NetworkRow({
             <View style={{ borderRadius: radius.md, backgroundColor: '#ef444412', overflow: "hidden" }}>
               <View style={{ paddingHorizontal: 10, paddingVertical: 6, borderBottomWidth: 0.5, borderBottomColor: '#ef444430' }}>
                 <Text style={{ color: '#ef4444', fontSize: 9, fontFamily: fonts.sans.semibold, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  Error
+                  {t('browser.networkErrorLabel')}
                 </Text>
               </View>
               <Text style={{ color: '#ef4444', fontSize: 10, lineHeight: 15, fontFamily: fonts.mono.regular, padding: 10 }}>
@@ -160,6 +163,7 @@ function ResponseSheet({
   entry: DevsoleNetworkEntry | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors, fonts, radius } = useTheme();
   const { height: windowHeight } = useWindowDimensions();
   const [modalVisible, setModalVisible] = useState(false);
@@ -269,7 +273,7 @@ function ResponseSheet({
                 fontFamily: fonts.sans.semibold,
               }}
             >
-              Response
+              {t('browser.networkResponseLabel')}
             </Text>
 
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -340,6 +344,7 @@ export default function NetworkSection({
   onClear: () => void;
   listKey: string;
 }) {
+  const { t } = useTranslation();
   const { colors, fonts, radius } = useTheme();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -447,7 +452,7 @@ export default function NetworkSection({
               ref={searchInputRef}
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="Search requests"
+              placeholder={t('browser.networkSearchPlaceholder')}
               placeholderTextColor={colors.fg.subtle}
               style={{
                 color: colors.fg.default,
@@ -478,7 +483,7 @@ export default function NetworkSection({
           >
             <Network size={35} color={colors.fg.muted} strokeWidth={1.4} />
             <Text style={{ color: colors.fg.default, fontSize: 14, fontFamily: fonts.sans.semibold }}>
-              No network events yet
+              {t('browser.networkNoEvents')}
             </Text>
             <Text
               style={{
@@ -489,7 +494,7 @@ export default function NetworkSection({
                 fontFamily: fonts.sans.regular,
               }}
             >
-              Requests triggered from the active page will appear here.
+              {t('browser.networkRequestsHint')}
             </Text>
           </View>
         ) : (

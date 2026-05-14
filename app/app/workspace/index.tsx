@@ -9,6 +9,7 @@ import { usePlugins } from "@/plugins";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useDrawerStatus } from "@react-navigation/drawer";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   BackHandler,
@@ -25,6 +26,7 @@ export default function WorkspaceScreen() {
   const { status, sessionState, error, isReconnecting, interactionBlockReason, disconnect } = useConnection();
   const router = useRouter();
   const drawerStatus = useDrawerStatus();
+  const { t } = useTranslation();
 
   const [bottomBarHeight, setBottomBarHeight] = useState(0);
   const prevSessionStateRef = useRef(sessionState);
@@ -56,9 +58,9 @@ export default function WorkspaceScreen() {
 
     if (prev !== sessionState && (sessionState === "ended" || sessionState === "expired" || sessionState === "cli_offline_grace")) {
       Alert.alert(
-        'Connection Lost',
-        'Your session was disconnected. Run npx lunel-cli again to reconnect.',
-        [{ text: 'Home', style: 'destructive', onPress: handleGoHome }],
+        t('workspace.connectionLostTitle'),
+        t('workspace.connectionLostDesc'),
+        [{ text: t('workspace.goHome'), style: 'destructive', onPress: handleGoHome }],
         { cancelable: false }
       );
     }
@@ -91,10 +93,10 @@ export default function WorkspaceScreen() {
     if (reconnectAttemptVisibleRef.current && status !== "connected" && error && !reconnectFailureAlertVisibleRef.current) {
       reconnectFailureAlertVisibleRef.current = true;
       Alert.alert(
-        "Session Disconnected",
-        "Automatic reconnect failed. Go home and reconnect to your session.",
+        t('workspace.sessionDisconnectedTitle'),
+        t('workspace.sessionDisconnectedDesc'),
         [
-          { text: "Go Home", style: "destructive", onPress: handleGoHome },
+          { text: t('workspace.goHome'), style: "destructive", onPress: handleGoHome },
         ],
         { cancelable: false }
       );
@@ -226,16 +228,30 @@ export default function WorkspaceScreen() {
             elevation: 20,
           }}
         >
-          <Text
-            style={{
-              color: colors.fg.muted,
-              fontSize: 12,
-              fontWeight: "600",
-              textAlign: "center",
-            }}
-          >
-            {interactionBlockReason === "offline" ? "Offline. Waiting for connection..." : "Reconnecting..."}
-          </Text>
+          <View style={{ width: 20, height: 20 }}>
+              <Loading color={colors.fg.default} />
+            </View>
+            <Text
+              style={{
+                color: colors.fg.default,
+                fontSize: 16,
+                fontWeight: "600",
+                textAlign: "center",
+              }}
+            >
+              {interactionBlockReason === "offline" ? t('workspace.offline') : t('workspace.reconnecting')}
+            </Text>
+            <Text
+              style={{
+                color: colors.fg.muted,
+                fontSize: 13,
+                textAlign: "center",
+              }}
+            >
+              {interactionBlockReason === "offline"
+                ? t('workspace.waitingConnection')
+                : t('workspace.restoringSession')}
+            </Text>
         </View>
       ) : null}
     </View>

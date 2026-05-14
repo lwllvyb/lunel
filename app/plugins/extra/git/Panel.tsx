@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Animated,
   Easing,
@@ -166,6 +167,7 @@ const GitFileIcon = memo(function GitFileIcon({
 });
 
 function GitPanel({ instanceId, isActive }: PluginPanelProps) {
+  const { t } = useTranslation();
   const { colors, fonts, spacing, radius } = useTheme();
   const headerHeight = useHeaderHeight();
   const { status: connStatus } = useConnection();
@@ -745,7 +747,7 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
   if (!isConnected) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg.base }}>
-        <Header title="Git" colors={colors} />
+        <Header title={t('nav.git')} colors={colors} />
         <NotConnected colors={colors} fonts={fonts} />
       </View>
     );
@@ -777,7 +779,7 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg.base }}>
       <Header
-        title="Git"
+        title={t('nav.git')}
         colors={colors}
         showBottomBorder={!loading}
         rightAccessory={
@@ -796,9 +798,9 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
           borderBottomColor: colors.border.secondary,
         }}>
           {([
-            { key: 'changes', label: 'Changes' },
-            { key: 'history', label: 'History' },
-            { key: 'branches', label: 'Branches' },
+            { key: 'changes', label: t('git.tabChanges') },
+            { key: 'history', label: t('git.tabHistory') },
+            { key: 'branches', label: t('git.tabBranches') },
           ] as { key: Tab; label: string }[]).map((tab) => {
             const active = activeTab === tab.key;
             return (
@@ -856,7 +858,7 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing[2], marginBottom: spacing[3], marginHorizontal: spacing[1] }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Text style={[sectionHeaderStyle, { color: colors.fg.default, fontSize: 13 }]}>
-                      Staged
+                      {t('git.staged')}
                     </Text>
                     <View style={sectionCountBadgeStyle}>
                       <Text style={sectionCountTextStyle}>{gitStatus.staged.length}</Text>
@@ -864,7 +866,7 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
                   </View>
                   <TouchableOpacity onPress={handleUnstageAll} disabled={unstageAllLoading} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 7, paddingHorizontal: 8, paddingVertical: 5, backgroundColor: colors.bg.raised }}>
                     {unstageAllLoading ? <SpinnerIcon size={14} color={colors.fg.subtle} /> : <Minus size={14} color={colors.fg.default} strokeWidth={2} />}
-                    <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: colors.fg.default }}>Unstage all</Text>
+                    <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: colors.fg.default }}>{t('git.unstageAll')}</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -923,7 +925,7 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing[2], marginBottom: spacing[3], marginHorizontal: spacing[1] }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Text style={[sectionHeaderStyle, { color: colors.fg.default, fontSize: 13, fontFamily: fonts.sans.medium }]}>
-                      Changes
+                      {t('git.changes')}
                     </Text>
                     <View style={sectionCountBadgeStyle}>
                       <Text style={sectionCountTextStyle}>{gitStatus.unstaged.length + gitStatus.untracked.length}</Text>
@@ -932,11 +934,11 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
                     <TouchableOpacity onPress={() => handleDiscard()} disabled={discardAllLoading} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 7, paddingHorizontal: 8, paddingVertical: 5, backgroundColor: colors.git.deleted + '18' }}>
                       {discardAllLoading ? <SpinnerIcon size={14} color={colors.git.deleted} /> : <Undo size={14} color={colors.git.deleted} strokeWidth={2} />}
-                      <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: colors.git.deleted }}>Discard all</Text>
+                      <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: colors.git.deleted }}>{t('git.discardAll')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handleStageAll} disabled={stageAllLoading} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 7, paddingHorizontal: 8, paddingVertical: 5, backgroundColor: colors.bg.raised }}>
                       {stageAllLoading ? <SpinnerIcon size={14} color={colors.fg.subtle} /> : <Plus size={14} color={colors.fg.subtle} strokeWidth={2} />}
-                      <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: colors.fg.default }}>Stage all</Text>
+                      <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: colors.fg.default }}>{t('git.stageAll')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -1056,7 +1058,7 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
                 <View style={{ alignItems: 'center', gap: 8 }}>
                   <CheckCircle2 size={48} color={colors.fg.muted} strokeWidth={1.5} />
                   <Text style={{ color: colors.fg.muted, fontSize: 16, fontFamily: fonts.sans.regular }}>
-                    Working tree clean
+                    {t('git.workingTreeClean')}
                   </Text>
                 </View>
               </View>
@@ -1078,7 +1080,7 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
               <View style={{ alignItems: 'center', gap: 8 }}>
                 <GitCommitIcon size={48} color={colors.fg.muted} strokeWidth={1.5} />
                 <Text style={{ color: colors.fg.muted, fontSize: 16, fontFamily: fonts.sans.regular }}>
-                  No commits yet
+                  {t('git.noCommits')}
                 </Text>
               </View>
             </View>
@@ -1228,7 +1230,7 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
             <View style={{ alignItems: 'center', gap: 8 }}>
               <GitBranch size={48} color={colors.fg.muted} strokeWidth={1.5} />
               <Text style={{ color: colors.fg.muted, fontSize: 16, fontFamily: fonts.sans.regular }}>
-                No branches found
+                {t('git.noBranches')}
               </Text>
             </View>
           </View>
@@ -1325,21 +1327,21 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
                   style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 10, height: 32, borderRadius: 8, backgroundColor: colors.bg.raised }}
                 >
                   <Plus size={13} color={colors.fg.default} strokeWidth={2} />
-                  <Text style={{ fontSize: 13, fontFamily: fonts.sans.medium, color: colors.fg.default }}>New Branch</Text>
+                  <Text style={{ fontSize: 13, fontFamily: fonts.sans.medium, color: colors.fg.default }}>{t('git.newBranch')}</Text>
                 </TouchableOpacity>
               ) : (
                 <>
                   <TouchableOpacity onPress={handlePullLongPress} disabled={pullLoading || pushLoading} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, width: 72, height: 32, borderRadius: 8, backgroundColor: colors.bg.raised }}>
-                    {pullLoading ? <SpinnerIcon size={13} color={colors.fg.subtle} /> : <><ArrowDown size={13} color={colors.fg.default} strokeWidth={2} /><Text style={{ fontSize: 13, fontFamily: fonts.sans.medium, color: colors.fg.default }}>Pull</Text></>}
+                    {pullLoading ? <SpinnerIcon size={13} color={colors.fg.subtle} /> : <><ArrowDown size={13} color={colors.fg.default} strokeWidth={2} /><Text style={{ fontSize: 13, fontFamily: fonts.sans.medium, color: colors.fg.default }}>{t('git.pull')}</Text></>}
                   </TouchableOpacity>
                   {gitStatus.staged.length > 0 ? (
                     <TouchableOpacity onPress={openCommitPrompt} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 14, height: 32, borderRadius: 8, backgroundColor: colors.bg.raised }}>
                       <GitCommitIcon size={13} color={colors.fg.default} strokeWidth={2} />
-                      <Text style={{ fontSize: 13, fontFamily: fonts.sans.medium, color: colors.fg.default }}>Commit</Text>
+                      <Text style={{ fontSize: 13, fontFamily: fonts.sans.medium, color: colors.fg.default }}>{t('git.commit')}</Text>
                     </TouchableOpacity>
                   ) : (
                     <TouchableOpacity onPress={handlePushLongPress} disabled={pushLoading || gitStatus.ahead === 0} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, width: 72, height: 32, borderRadius: 8, backgroundColor: colors.bg.raised, opacity: gitStatus.ahead === 0 ? 0.4 : 1 }}>
-                      {pushLoading ? <SpinnerIcon size={13} color={colors.fg.subtle} /> : <><ArrowUp size={13} color={gitStatus.ahead > 0 ? colors.fg.default : colors.fg.muted} strokeWidth={2} /><Text style={{ fontSize: 13, fontFamily: fonts.sans.medium, color: gitStatus.ahead > 0 ? colors.fg.default : colors.fg.muted }}>Push</Text></>}
+                      {pushLoading ? <SpinnerIcon size={13} color={colors.fg.subtle} /> : <><ArrowUp size={13} color={gitStatus.ahead > 0 ? colors.fg.default : colors.fg.muted} strokeWidth={2} /><Text style={{ fontSize: 13, fontFamily: fonts.sans.medium, color: gitStatus.ahead > 0 ? colors.fg.default : colors.fg.muted }}>{t('git.push')}</Text></>}
                     </TouchableOpacity>
                   )}
                 </>
@@ -1409,7 +1411,7 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
               }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[3], paddingTop: spacing[3], paddingBottom: spacing[2] }}>
                   <Text style={[sectionHeaderStyle, { color: colors.fg.subtle }]}>
-                    Files changed
+                    {t('git.filesChanged')}
                   </Text>
                   <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: colors.bg.base }}>
                     <Text style={{ fontSize: 10, fontFamily: fonts.sans.semibold, color: colors.fg.subtle }}>
@@ -1475,7 +1477,7 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
               }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[3], paddingTop: spacing[3], paddingBottom: spacing[2] }}>
                   <Text style={[sectionHeaderStyle, { color: colors.fg.subtle }]}>
-                    Diff
+                    {t('git.diffLabel')}
                   </Text>
                   {selectedCommitFile && (
                     <Text style={{ fontSize: 11, fontFamily: fonts.mono.regular, color: colors.fg.subtle }} numberOfLines={1}>
@@ -1533,7 +1535,7 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
                     <StatusBadge status={selectedChangeFile.status} fonts={fonts} colors={colors} />
                   </View>
                   <Text style={{ fontSize: typography.caption, fontFamily: fonts.sans.regular, color: colors.fg.subtle }}>
-                    {selectedChangeFile.staged ? 'Staged changes' : 'Working tree changes'}
+                    {selectedChangeFile.staged ? t('git.stagedChanges') : t('git.workingTreeChanges')}
                   </Text>
                 </View>
               )}
@@ -1547,7 +1549,7 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
               }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[3], paddingTop: spacing[3], paddingBottom: spacing[2] }}>
                   <Text style={[sectionHeaderStyle, { color: colors.fg.subtle }]}>
-                    {selectedChangeContent != null ? 'File' : 'Diff'}
+                    {selectedChangeContent != null ? t('git.fileLabel') : t('git.diffLabel')}
                   </Text>
                 </View>
                 {selectedChangeContent != null ? (
@@ -1583,20 +1585,20 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
 
       <InputModal
         visible={showCommitInputModal}
-        title="Commit"
-        description="Enter commit message"
-        acceptLabel="Commit"
-        cancelLabel="Cancel"
+        title={t('git.commitTitle')}
+        description={t('git.commitDesc')}
+        acceptLabel={t('git.commitTitle')}
+        cancelLabel={t('common.cancel')}
         onCancel={() => setShowCommitInputModal(false)}
         onAccept={(value) => { setShowCommitInputModal(false); void handleCommit(value); }}
       />
 
       <InputModal
         visible={showBranchInputModal}
-        title="New Branch"
-        description="Enter branch name"
-        acceptLabel="Create"
-        cancelLabel="Cancel"
+        title={t('git.newBranchTitle')}
+        description={t('git.newBranchDesc')}
+        acceptLabel={t('git.create')}
+        cancelLabel={t('common.cancel')}
         onCancel={() => setShowBranchInputModal(false)}
         onAccept={(value) => { setShowBranchInputModal(false); void handleCreateBranch(value); }}
       />
@@ -1604,12 +1606,12 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
       <ActionSheet
         visible={showPullActionSheet}
         onClose={() => setShowPullActionSheet(false)}
-        title="Pull options"
+        title={t('git.pullOptionsTitle')}
         options={[
-          { label: 'Pull', onPress: () => { void handlePull(); } },
-          { label: 'Merge', onPress: () => { void handlePullWithStrategy('merge'); } },
-          { label: 'Rebase', onPress: () => { void handlePullWithStrategy('rebase'); } },
-          { label: 'Fast-forward only', onPress: () => { void handlePullWithStrategy('ff-only'); } },
+          { label: t('git.pull'), onPress: () => { void handlePull(); } },
+          { label: t('git.pullMerge'), onPress: () => { void handlePullWithStrategy('merge'); } },
+          { label: t('git.pullRebase'), onPress: () => { void handlePullWithStrategy('rebase'); } },
+          { label: t('git.pullFfOnly'), onPress: () => { void handlePullWithStrategy('ff-only'); } },
         ]}
       />
 
@@ -1647,10 +1649,10 @@ function GitPanel({ instanceId, isActive }: PluginPanelProps) {
           >
             <SpinnerIcon size={22} color={colors.fg.default} />
             <Text style={{ fontSize: 16, fontFamily: fonts.sans.semibold, color: colors.fg.default, textAlign: 'center' }}>
-              Loading commit
+              {t('git.loadingCommit')}
             </Text>
             <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: colors.fg.muted, textAlign: 'center' }}>
-              {`Fetching diff for ${loadingCommitHash?.substring(0, 7) ?? 'this commit'}...`}
+              {t('git.loadingCommitDesc', { hash: loadingCommitHash?.substring(0, 7) ?? '...' })}
             </Text>
           </View>
         </View>

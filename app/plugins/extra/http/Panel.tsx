@@ -1,4 +1,5 @@
 import React, { useState, useEffect, memo, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ScrollView,
   Text,
@@ -72,6 +73,7 @@ async function saveHistory(history: HistoryItem[]) {
 const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 
 function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) {
+  const { t } = useTranslation();
   const { colors, fonts, spacing } = useTheme();
   const headerHeight = useHeaderHeight();
   const { http: httpApi, isConnected } = useApi();
@@ -354,7 +356,7 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg.base }}>
-      <Header title="Rest API Client" colors={colors} />
+      <Header title={t('nav.http')} colors={colors} />
 
       <View style={{
         flexDirection: 'row',
@@ -363,9 +365,9 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
         borderBottomColor: colors.border.secondary,
       }}>
         {([
-          { key: 'client', label: 'API Client' },
-          { key: 'history', label: 'History' },
-          { key: 'configure', label: 'Configure' },
+          { key: 'client', label: t('http.tabClient') },
+          { key: 'history', label: t('http.tabHistory') },
+          { key: 'configure', label: t('http.tabConfigure') },
         ] as { key: HttpTab; label: string }[]).map((tab) => {
           const active = activeTab === tab.key;
           return (
@@ -411,10 +413,10 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
                   color: colors.fg.default,
                   marginBottom: 2,
                 }}>
-                  Route requests via PC
+                  {t('http.routeViaPC')}
                 </Text>
                 <Text style={{ fontSize: typography.caption, fontFamily: fonts.sans.regular, color: colors.fg.muted }}>
-                  Allows localhost access and uses the connected CLI machine for outgoing requests.
+                  {t('http.routeViaPCDesc')}
                 </Text>
               </View>
               <View style={{ width: 72, alignItems: 'flex-end' }}>
@@ -446,10 +448,10 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
                 color: colors.fg.default,
                 marginBottom: 2,
               }}>
-                Clear history
+                {t('http.clearHistory')}
               </Text>
               <Text style={{ fontSize: typography.caption, fontFamily: fonts.sans.regular, color: colors.fg.muted }}>
-                Removes saved request and response history from this tool.
+                {t('http.clearHistoryDesc')}
               </Text>
             </View>
             <View
@@ -467,7 +469,7 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
                 fontFamily: fonts.sans.medium,
                 color: colors.terminal.red,
               }}>
-                Clear
+                {t('http.clear')}
               </Text>
             </View>
           </TouchableOpacity>
@@ -477,7 +479,7 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: spacing[10] }}>
             <Clock size={48} color={colors.fg.subtle} strokeWidth={1.5} />
             <Text style={{ fontSize: baseTextSize, fontFamily: fonts.sans.medium, color: colors.fg.muted, marginTop: spacing[4] }}>
-              No history yet
+              {t('http.noHistory')}
             </Text>
           </View>
         ) : (
@@ -486,7 +488,7 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
               <TextInput
                 value={historySearch}
                 onChangeText={setHistorySearch}
-                placeholder="Search history"
+                placeholder={t('http.searchHistoryPlaceholder')}
                 placeholderTextColor={colors.fg.muted}
                 style={{
                   height: 40,
@@ -560,7 +562,7 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
               })}
               {filteredHistory.length === 0 && (
                 <View style={{ paddingVertical: spacing[5], alignItems: 'center' }}>
-                  <Text style={metaTextStyle}>No matching history entries</Text>
+                  <Text style={metaTextStyle}>{t('http.noMatchingHistory')}</Text>
                 </View>
               )}
               </View>
@@ -652,7 +654,7 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
                 ) : (
                   <ChevronRight size={16} color={colors.fg.muted} strokeWidth={2} />
                 )}
-                <Text style={sectionLabelStyle}>Request</Text>
+                <Text style={sectionLabelStyle}>{t('http.request')}</Text>
               </View>
             </TouchableOpacity>
 
@@ -662,7 +664,7 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
                 paddingBottom: spacing[3],
               }}>
                 {/* Headers label */}
-                <Text style={{ ...sectionLabelStyle, marginBottom: spacing[2] }}>Headers</Text>
+                <Text style={{ ...sectionLabelStyle, marginBottom: spacing[2] }}>{t('http.headers')}</Text>
                 <View>
                   {headers.map((header, index) => (
                     <View
@@ -714,7 +716,7 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
                         } as any}
                         value={header.key}
                         onChangeText={(v) => updateHeader(header.id, 'key', v)}
-                        placeholder="Key"
+                        placeholder={t('http.keyPlaceholder')}
                         placeholderTextColor={colors.fg.muted}
                       />
                       <TextInput
@@ -728,7 +730,7 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
                         } as any}
                         value={header.value}
                         onChangeText={(v) => updateHeader(header.id, 'value', v)}
-                        placeholder="Value"
+                        placeholder={t('http.valuePlaceholder')}
                         placeholderTextColor={colors.fg.muted}
                       />
                       <TouchableOpacity
@@ -751,14 +753,14 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
                 >
                   <Plus size={16} color={colors.accent.default} strokeWidth={2} />
                   <Text style={{ fontSize: baseTextSize, fontFamily: fonts.sans.medium, color: colors.accent.default }}>
-                    Add header
+                    {t('http.addHeader')}
                   </Text>
                 </TouchableOpacity>
 
                 {/* Body */}
                 {(method === 'POST' || method === 'PUT' || method === 'PATCH') && (
                   <>
-                    <Text style={{ ...sectionLabelStyle, marginTop: spacing[3], marginBottom: spacing[2] }}>Body</Text>
+                    <Text style={{ ...sectionLabelStyle, marginTop: spacing[3], marginBottom: spacing[2] }}>{t('http.body')}</Text>
                     <TextInput
                       style={{
                         minHeight: 88,
@@ -864,7 +866,7 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
                     <ChevronRight size={14} color={colors.fg.muted} strokeWidth={2} />
                   )}
                   <Text style={sectionLabelStyle}>
-                    Response Headers ({Object.keys(response.headers).length})
+                    {t('http.responseHeaders', { count: Object.keys(response.headers).length })}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -946,7 +948,7 @@ function HttpPanel({ instanceId, isActive, bottomBarHeight }: PluginPanelProps) 
               fontFamily: fonts.sans.semibold,
               color: '#fff',
             }}>
-              Send Request
+              {t('http.sendRequest')}
             </Text>
           )}
         </TouchableOpacity>

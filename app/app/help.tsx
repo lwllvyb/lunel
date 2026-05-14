@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import React from "react";
 import * as WebBrowser from "expo-web-browser";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 interface FaqItemProps {
   question: string;
@@ -65,50 +66,51 @@ export default function HelpPage() {
   const { colors, fonts, spacing, typography } = useTheme();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
+  const { t } = useTranslation();
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg.base }]}>
-      <Header title="Help & Information" colors={colors} onBack={() => router.back()} />
+      <Header title={t('help.title')} colors={colors} onBack={() => router.back()} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
         <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: typography.caption }]}>
-          GETTING STARTED
+          {t('help.gettingStarted')}
         </Text>
         <View style={[styles.faqList, { marginHorizontal: 12 }]}>
           <FaqItem
-            question="How do I connect to a session?"
-            answer="Run `npx lunel-cli` on your machine, then scan the generated QR code from the app."
+            question={t('help.question1')}
+            answer={t('help.answer1')}
           />
           <FaqItem
-            question="What if I get disconnected?"
-            answer="Open Home and scan a fresh QR code from a new CLI session to reconnect."
+            question={t('help.question2')}
+            answer={t('help.answer2')}
           />
         </View>
 
         <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: typography.caption }]}>
-          TROUBLESHOOTING
+          {t('help.troubleshooting')}
         </Text>
         <View style={[styles.faqList, { marginHorizontal: 12 }]}>
           <FaqItem
-            question="Why is the scanner not working?"
-            answer="Enable camera permission in iOS Settings and make sure the QR code is fully visible."
+            question={t('help.question3')}
+            answer={t('help.answer3')}
           />
           <FaqItem
-            question="Why am I not connecting?"
-            answer="Verify your machine is online, rerun `npx lunel-cli`, and scan the newest QR code."
+            question={t('help.question4')}
+            answer={t('help.answer4')}
           />
         </View>
 
         <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: typography.caption }]}>
-          LINKS
+          {t('help.links')}
         </Text>
         <View style={[styles.linkList, { marginHorizontal: 12 }]}>
-          <LinkRow label="Terms" url="https://app.lunel.dev/terms" />
-          <LinkRow label="Policy" url="https://app.lunel.dev/policy" />
-          <LinkRow label="Security" url="https://app.lunel.dev/security" />
-          <LinkRow label="Discord" url="https://discord.gg/tdaywsP4HK" />
-          <LinkRow label="GitHub" url="https://github.com/lunel-dev" />
-          <LinkRow label="Twitter" url="https://twitter.com/uselunel" />
+          <LinkRow label={t('help.terms')} url="https://app.lunel.dev/terms" />
+          <LinkRow label={t('help.policy')} url="https://app.lunel.dev/policy" />
+          <LinkRow label={t('help.security')} url="https://app.lunel.dev/security" />
+          <LinkRow label={t('help.discord')} url="https://discord.gg/tdaywsP4HK" />
+          <LinkRow label={t('help.github')} url="https://github.com/lunel-dev" />
+          <LinkRow label={t('help.twitter')} url="https://twitter.com/uselunel" />
         </View>
 
         <View style={{ height: spacing[8] }} />

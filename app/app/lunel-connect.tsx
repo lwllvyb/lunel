@@ -36,6 +36,7 @@ import * as NavigationBar from "expo-navigation-bar";
 import Svg, { Path, Rect } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useConnection } from "../contexts/ConnectionContext";
+import { useTranslation } from "react-i18next";
 import ReAnimated, { useAnimatedStyle, useSharedValue, withSpring, withTiming, runOnJS } from "react-native-reanimated";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import { useKeyboardHandler } from "react-native-keyboard-controller";
@@ -76,6 +77,7 @@ function CopyableCommand({ command, fonts, colors }: { command: string; fonts: R
 const LunelConnect = () => {
   const router = useRouter();
   const { colors, fonts, typography } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const {
     connect,
@@ -252,7 +254,7 @@ const LunelConnect = () => {
   const handleConnectWithCode = async (code: string) => {
     const trimmedCode = code.trim();
     if (!trimmedCode) {
-      setToastMessage("Please enter a connection code.");
+      setToastMessage(t('lunelConnect.errorEmptyCode'));
       setToastVisible(true);
       return;
     }
@@ -264,8 +266,8 @@ const LunelConnect = () => {
       hasActiveConnectAttemptRef.current = false;
     } catch (err) {
       hasActiveConnectAttemptRef.current = false;
-      setError(err instanceof Error ? err.message : "Connection failed");
-      setToastMessage("Something went wrong, please try again.");
+      setError(err instanceof Error ? err.message : t('lunelConnect.errorConnectionFailed'));
+      setToastMessage(t('lunelConnect.errorGeneric'));
       setToastVisible(true);
     } finally {
       setIsConnecting(false);
@@ -375,11 +377,11 @@ const LunelConnect = () => {
                   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   if (Platform.OS === "ios") {
                     Alert.prompt(
-                      "Enter code",
-                      "Type the code shown in your terminal",
+                      t('lunelConnect.enterCode'),
+                      t('lunelConnect.enterCodeDesc'),
                       [
-                        { text: "Cancel", style: "cancel" },
-                        { text: "Connect", onPress: (code) => { if (code?.trim()) handleConnectWithCode(code.trim()); } },
+                        { text: t('common.cancel'), style: "cancel" },
+                        { text: t('common.connect'), onPress: (code) => { if (code?.trim()) handleConnectWithCode(code.trim()); } },
                       ],
                       "plain-text",
                       "",
@@ -401,7 +403,7 @@ const LunelConnect = () => {
                   alignItems: "center",
                 }}
               >
-                <Text style={{ color: BLACK, fontSize: 15, fontFamily: fonts.sans.semibold }}>Enter code</Text>
+                <Text style={{ color: BLACK, fontSize: 15, fontFamily: fonts.sans.semibold }}>{t('lunelConnect.enterCode')}</Text>
               </TouchableOpacity>
 
               {/* Overlays inside the scan area */}
@@ -412,11 +414,10 @@ const LunelConnect = () => {
                       <MaterialCommunityIcons name="camera-off" size={28} color={WHITE} />
                     </View>
                     <Text style={styles.permissionOverlayTitle}>
-                      Camera Access Required
+                      {t('lunelConnect.cameraAccessTitle')}
                     </Text>
                     <Text style={styles.permissionOverlayDesc}>
-                      This app uses the camera to scan a QR code to securely connect
-                      the app to your development environment or codebase.
+                      {t('lunelConnect.cameraAccessDesc')}
                     </Text>
                   </View>
                 )}
@@ -425,7 +426,7 @@ const LunelConnect = () => {
                     <Animated.View style={{ transform: [{ rotate: loaderSpin }] }}>
                       <LoaderCircle size={24} color={WHITE} strokeWidth={2} />
                     </Animated.View>
-                    <Text style={styles.connectingText}>Connecting...</Text>
+                    <Text style={styles.connectingText}>{t('lunelConnect.connecting')}</Text>
                   </View>
                 )}
               </View>
@@ -472,7 +473,7 @@ const LunelConnect = () => {
               </Svg>
             )}
             <Entypo name="info-with-circle" size={17} color={WHITE} />
-            <Text style={[styles.learnButtonText, { fontSize: typography.body }]}>Learn how to connect</Text>
+            <Text style={[styles.learnButtonText, { fontSize: typography.body }]}>{t('lunelConnect.learnHow')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -487,8 +488,8 @@ const LunelConnect = () => {
       <InfoSheet
         visible={showGuide}
         onClose={() => setShowGuide(false)}
-        title="How to connect"
-        description="Run one command, scan a QR, you're in"
+        title={t('lunelConnect.howToConnectTitle')}
+        description={t('lunelConnect.howToConnectSubtitle')}
       >
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
 
@@ -505,10 +506,10 @@ const LunelConnect = () => {
               </View>
               <View style={{ flex: 1, paddingBottom: 20 }}>
                 <Text style={{ fontSize: 14, fontFamily: fonts.sans.semibold, color: colors.fg.default, marginBottom: 4, lineHeight: 22 }}>
-                  Open your terminal on your PC
+                  {t('lunelConnect.step1Title')}
                 </Text>
                 <Text style={{ fontSize: 13, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 20 }}>
-                  Navigate to the repository where you want Lunel to work
+                  {t('lunelConnect.step1Desc')}
                 </Text>
               </View>
             </View>
@@ -523,14 +524,14 @@ const LunelConnect = () => {
               </View>
               <View style={{ flex: 1, paddingBottom: 20 }}>
                 <Text style={{ fontSize: 14, fontFamily: fonts.sans.semibold, color: colors.fg.default, marginBottom: 4, lineHeight: 22 }}>
-                  Run the command
+                  {t('lunelConnect.step2Title')}
                 </Text>
                 <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 18, marginBottom: 8 }}>
-                  First time in a repo it gives you a QR code to connect. Run it again and it just resumes the last session without a new QR. To reconnect, tap the previous session in the app
+                  {t('lunelConnect.step2Desc')}
                 </Text>
                 <CopyableCommand command="npx lunel-cli" fonts={fonts} colors={colors} />
                 <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 18, marginTop: 8, marginBottom: 6 }}>
-                  Need a fresh code?
+                  {t('lunelConnect.needFreshCode')}
                 </Text>
                 <CopyableCommand command="npx lunel-cli -n" fonts={fonts} colors={colors} />
               </View>
@@ -545,10 +546,10 @@ const LunelConnect = () => {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 14, fontFamily: fonts.sans.semibold, color: colors.fg.default, marginBottom: 4, lineHeight: 22 }}>
-                  Scan or type the code
+                  {t('lunelConnect.step3Title')}
                 </Text>
                 <Text style={{ fontSize: 13, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 20 }}>
-                  A QR code and a short code appear in your terminal. Scan with your camera or type the code in the input field and you are in
+                  {t('lunelConnect.step3Desc')}
                 </Text>
               </View>
             </View>
@@ -558,7 +559,7 @@ const LunelConnect = () => {
           {/* Done */}
           <View style={{ marginTop: 24 }}>
             <Text style={{ fontSize: 13, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 20 }}>
-              Once connected, your whole machine lives in your pocket. Ship from the couch, the toilet, anywhere
+              {t('lunelConnect.onceConnected')}
             </Text>
           </View>
 
@@ -576,7 +577,7 @@ const LunelConnect = () => {
           >
             <FontAwesome name="youtube-play" size={15} color={colors.fg.muted} />
             <Text style={{ fontSize: 13, fontFamily: fonts.sans.regular, color: colors.fg.muted }}>
-              Watch the tutorial on YouTube
+              {t('lunelConnect.watchTutorial')}
             </Text>
             <Ionicons name="chevron-forward" size={13} color={colors.fg.muted} style={{ marginLeft: -4 } as any} />
           </Pressable>
@@ -586,11 +587,11 @@ const LunelConnect = () => {
 
       <InputModal
         visible={showCodeInput}
-        title="Enter code"
-        description="Type the code shown in your terminal"
-        placeholder="e.g. abc-123-xyz"
-        acceptLabel="Connect"
-        cancelLabel="Cancel"
+        title={t('lunelConnect.enterCode')}
+        description={t('lunelConnect.enterCodeDesc')}
+        placeholder={t('lunelConnect.enterCodePlaceholder')}
+        acceptLabel={t('lunelConnect.connect')}
+        cancelLabel={t('common.cancel')}
         onCancel={() => setShowCodeInput(false)}
         onAccept={(code) => {
           setShowCodeInput(false);

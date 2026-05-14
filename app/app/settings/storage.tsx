@@ -4,6 +4,7 @@ import { lunelApi, StorageFileInfo } from "@/lib/storage";
 import { ChevronRight, RefreshCw, AlertTriangle, FolderOpen, FileText, X, Trash } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { useTranslation } from "react-i18next";
 
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import {
@@ -24,6 +25,7 @@ export default function StorageExplorerPage() {
   const { colors, fonts, radius, spacing } = useTheme();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
+  const { t } = useTranslation();
 
   const [files, setFiles] = useState<StorageFileInfo[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -111,7 +113,7 @@ export default function StorageExplorerPage() {
   return (
     <View style={[styles.container, { backgroundColor: colors.bg.base }]}>
       <Header
-        title="Storage Explorer"
+        title={t('storage.title')}
         colors={colors}
         onBack={() => router.back()}
         rightAccessory={(
@@ -140,10 +142,10 @@ export default function StorageExplorerPage() {
         <AlertTriangle size={18} color={'#f59e0b'} style={{ marginTop: 2 }} strokeWidth={2} />
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 12, fontFamily: fonts.sans.medium, color: '#f59e0b', marginBottom: 4 }}>
-            Internal App Data
+            {t('storage.warningTitle')}
           </Text>
           <Text style={{ fontSize: 11, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 16 }}>
-            Modifying or deleting files here can cause data loss or break things. Proceed only if you know what you're doing.
+            {t('storage.warningDesc')}
           </Text>
         </View>
       </View>
@@ -165,7 +167,7 @@ export default function StorageExplorerPage() {
               color: colors.fg.muted,
               marginTop: spacing[3],
             }}>
-              No storage files yet
+              {t('storage.noFiles')}
             </Text>
           </View>
         ) : (

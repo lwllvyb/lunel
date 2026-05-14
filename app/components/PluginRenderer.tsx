@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { usePlugins } from '@/plugins';
 import { PluginPanelProps } from '@/plugins/types';
+import { useTranslation } from 'react-i18next';
 
 // Memoized panel wrapper - only re-renders when isActive changes
 const MemoizedPanel = memo(function MemoizedPanel({
@@ -43,6 +44,7 @@ const MemoizedPanel = memo(function MemoizedPanel({
 export default function PluginRenderer({ paddingBottom = 0, bottomBarHeight = 0 }: { paddingBottom?: number; bottomBarHeight?: number }) {
   const { colors } = useTheme();
   const { openTabs, activeTabId, getPlugin } = usePlugins();
+  const { t } = useTranslation();
 
   // Memoize the tabs to render - only changes when openTabs changes
   const tabsToRender = useMemo(() => {
@@ -68,7 +70,7 @@ export default function PluginRenderer({ paddingBottom = 0, bottomBarHeight = 0 
     return (
       <View style={[styles.container, { backgroundColor: colors.bg.base, paddingBottom }]}>
         <View style={styles.emptyState}>
-          <Text style={[styles.emptyText, { color: colors.fg.muted }]}>No active tab</Text>
+          <Text style={[styles.emptyText, { color: colors.fg.muted }]}>{t('pluginRenderer.noActiveTab')}</Text>
         </View>
       </View>
     );

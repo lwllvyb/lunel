@@ -1,5 +1,6 @@
 import { FlashList } from "@shopify/flash-list";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useTranslation } from "react-i18next";
 import { AlertTriangle, ArrowUp, Bug, CircleAlert, Info, Search, TerminalSquare, Trash2 } from "lucide-react-native";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
@@ -7,13 +8,13 @@ import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
 import { DevsoleConsoleEntry, DevsoleConsoleLevel } from "./types";
 
-const LEVELS: { id: "all" | DevsoleConsoleLevel; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "log", label: "Log" },
-  { id: "info", label: "Info" },
-  { id: "warn", label: "Warn" },
-  { id: "error", label: "Error" },
-  { id: "debug", label: "Debug" },
+const LEVELS: { id: "all" | DevsoleConsoleLevel }[] = [
+  { id: "all" },
+  { id: "log" },
+  { id: "info" },
+  { id: "warn" },
+  { id: "error" },
+  { id: "debug" },
 ];
 
 function formatTime(timestamp: number) {
@@ -70,6 +71,7 @@ const ConsoleRow = memo(function ConsoleRow({
 }: {
   item: DevsoleConsoleEntry;
 }) {
+  const { t } = useTranslation();
   const { colors, fonts, radius } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const meta = getLevelMeta(item.level, colors);
@@ -116,7 +118,7 @@ const ConsoleRow = memo(function ConsoleRow({
               fontFamily: fonts.mono.regular,
             }}
           >
-            {preview || "[empty]"}
+            {preview || t('browser.consoleEmpty')}
           </Text>
         </View>
       </View>
@@ -212,6 +214,7 @@ export default function ConsoleSection({
   onExecute: (code: string) => void;
   listKey: string;
 }) {
+  const { t } = useTranslation();
   const { colors, fonts, radius } = useTheme();
   const { height: keyboardHeightSV } = useReanimatedKeyboardAnimation();
   const [inputFocused, setInputFocused] = useState(false);
@@ -298,7 +301,7 @@ export default function ConsoleSection({
                     fontFamily: isActive ? fonts.sans.semibold : fonts.sans.medium,
                   }}
                 >
-                  {level.label}
+                  {t(`browser.consoleLevel${level.id.charAt(0).toUpperCase() + level.id.slice(1)}`)}
                 </Text>
               </TouchableOpacity>
             );
@@ -362,7 +365,7 @@ export default function ConsoleSection({
             ref={searchInputRef}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Search console"
+            placeholder={t('browser.consoleSearchPlaceholder')}
             placeholderTextColor={colors.fg.subtle}
             style={{
               color: colors.fg.default,
@@ -392,7 +395,7 @@ export default function ConsoleSection({
           >
             <TerminalSquare size={35} color={colors.fg.muted} strokeWidth={1.4} />
             <Text style={{ color: colors.fg.default, fontSize: 14, fontFamily: fonts.sans.semibold }}>
-              No console events yet
+              {t('browser.consoleNoEvents')}
             </Text>
             <Text
               style={{
@@ -456,7 +459,7 @@ export default function ConsoleSection({
             value={input}
             onChangeText={setInput}
             onSubmitEditing={handleExecute}
-            placeholder="Run JavaScript in page"
+            placeholder={t('browser.consoleRunPlaceholder')}
             placeholderTextColor={colors.fg.subtle}
             style={{
               color: colors.fg.default,

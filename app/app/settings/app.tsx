@@ -2,6 +2,7 @@ import { useAppSettings } from "@/contexts/AppSettingsContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import Header, { useHeaderHeight } from "@/components/Header";
 import { Stack, useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import React from "react";
 import {
@@ -51,20 +52,21 @@ export default function AppSettingsPage() {
   const { settings, updateSetting } = useAppSettings();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
+  const { t } = useTranslation();
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg.base }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <Header title="App" colors={colors} onBack={() => router.back()} />
+      <Header title={t('settingsApp.title')} colors={colors} onBack={() => router.back()} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
         <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: typography.caption }]}>
-          DISPLAY
+          {t('settingsApp.display')}
         </Text>
         <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 10 }]}>
           <ToggleRow
-            label="Keep App Awake"
-            description="Prevent auto-lock while Lunel is open"
+            label={t('settingsApp.keepAwake')}
+            description={t('settingsApp.preventAutoLock')}
             value={settings.keepAwakeEnabled}
             onValueChange={(value) => {
               void updateSetting("keepAwakeEnabled", value);

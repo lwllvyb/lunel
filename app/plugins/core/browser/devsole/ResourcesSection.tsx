@@ -1,6 +1,7 @@
 import { FlashList } from "@shopify/flash-list";
 import * as Clipboard from "expo-clipboard";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useTranslation } from "react-i18next";
 import { Check, Copy, Plus, RefreshCw, Search, Trash2, X } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -37,6 +38,7 @@ function ResourceEditorSheet({
   onChange: (editor: EditorState) => void;
   onSave: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors, fonts, radius } = useTheme();
   const { height: windowHeight } = useWindowDimensions();
   const [modalVisible, setModalVisible] = useState(false);
@@ -88,8 +90,8 @@ function ResourceEditorSheet({
 
   if (!modalVisible || !editor) return null;
 
-  const keyLabel = editor.type === "cookie" ? "Name" : "Key";
-  const valueLabel = "Value";
+  const keyLabel = editor.type === "cookie" ? t('browser.resourcesKeyName') : t('browser.resourcesKeyLabel');
+  const valueLabel = t('browser.resourcesValueLabel');
   const currentName = editor.type === "cookie" ? editor.name : editor.key;
   const currentValue = editor.value;
 
@@ -152,7 +154,7 @@ function ResourceEditorSheet({
                   fontFamily: fonts.sans.semibold,
                 }}
               >
-                {editor.type === "cookie" ? "Edit Cookie" : "Edit Storage"}
+                {editor.type === "cookie" ? t('browser.resourcesEditCookie') : t('browser.resourcesEditStorage')}
               </Text>
               <TouchableOpacity
                 onPress={onClose}
@@ -302,6 +304,7 @@ export default function ResourcesSection({
   onSetCookie: (name: string, value: string) => void;
   onRemoveCookie: (name: string) => void;
 }) {
+  const { t } = useTranslation();
   const { colors, fonts, radius } = useTheme();
   const [mode, setMode] = useState<ResourceMode>("localStorage");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -381,10 +384,10 @@ export default function ResourcesSection({
                   }}
                 >
                   {nextMode === "localStorage"
-                    ? "Local"
+                    ? t('browser.resourcesLocal')
                     : nextMode === "sessionStorage"
-                      ? "Session"
-                      : "Cookies"}
+                      ? t('browser.resourcesSession')
+                      : t('browser.resourcesCookies')}
                 </Text>
               </TouchableOpacity>
             );
@@ -486,7 +489,7 @@ export default function ResourcesSection({
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder={mode === "cookies" ? "Search cookies" : "Search storage"}
+              placeholder={mode === "cookies" ? t('browser.resourcesSearchCookies') : t('browser.resourcesSearchStorage')}
               placeholderTextColor={colors.fg.subtle}
               style={{
                 color: colors.fg.default,
@@ -549,7 +552,7 @@ export default function ResourcesSection({
                       fontFamily: fonts.mono.regular,
                     }}
                   >
-                    {item.value || "empty"}
+                    {item.value || t('browser.resourcesEmpty')}
                   </Text>
                 </View>
 
@@ -577,7 +580,7 @@ export default function ResourcesSection({
             ListEmptyComponent={
               <View style={{ paddingTop: 32, alignItems: "center" }}>
                 <Text style={{ color: colors.fg.muted, fontSize: 12, fontFamily: fonts.sans.regular }}>
-                  No cookies
+                  {t('browser.resourcesNoCookies')}
                 </Text>
               </View>
             }
@@ -629,7 +632,7 @@ export default function ResourcesSection({
                       fontFamily: fonts.mono.regular,
                     }}
                   >
-                    {item.value || "empty"}
+                    {item.value || t('browser.resourcesEmpty')}
                   </Text>
                 </View>
 
@@ -657,7 +660,7 @@ export default function ResourcesSection({
             ListEmptyComponent={
               <View style={{ paddingTop: 32, alignItems: "center" }}>
                 <Text style={{ color: colors.fg.muted, fontSize: 12, fontFamily: fonts.sans.regular }}>
-                  No entries
+                  {t('browser.resourcesNoEntries')}
                 </Text>
               </View>
             }

@@ -7,6 +7,7 @@ import {
 } from "@/constants/themes";
 import { ChevronRight } from "lucide-react-native";
 import { Stack, useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import React from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -48,15 +49,16 @@ export default function FontsPage() {
   } = useTheme();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
+  const { t } = useTranslation();
 
-  const currentNormalName = normalFamilies[fontSelection.normal]?.name ?? "Default";
-  const currentMonoName = monoFamilies[fontSelection.mono]?.name ?? "Default";
-  const currentDisplayName = displayFamilies[fontSelection.display]?.name ?? "Default";
+  const currentNormalName = normalFamilies[fontSelection.normal]?.name ?? t('common.default');
+  const currentMonoName = monoFamilies[fontSelection.mono]?.name ?? t('common.default');
+  const currentDisplayName = displayFamilies[fontSelection.display]?.name ?? t('common.default');
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg.base }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <Header title="Fonts" colors={colors} onBack={() => router.back()} />
+      <Header title={t('settingsFonts.title')} colors={colors} onBack={() => router.back()} />
 
       <ScrollView
         style={{ flex: 1 }}
@@ -65,19 +67,19 @@ export default function FontsPage() {
       >
         <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 10, marginHorizontal: spacing[3] }]}>
           <FontRow
-            label="Normal Font"
+            label={t('settingsFonts.normalFont')}
             currentFont={currentNormalName}
             onPress={() => router.push("/settings/appearance/fonts/normal")}
           />
           <View style={[styles.divider, { backgroundColor: colors.border.tertiary }]} />
           <FontRow
-            label="Code Font"
+            label={t('settingsFonts.codeFont')}
             currentFont={currentMonoName}
             onPress={() => router.push("/settings/appearance/fonts/code")}
           />
           <View style={[styles.divider, { backgroundColor: colors.border.tertiary }]} />
           <FontRow
-            label="Display Font"
+            label={t('settingsFonts.displayFont')}
             currentFont={currentDisplayName}
             onPress={() => router.push("/settings/appearance/fonts/display")}
           />

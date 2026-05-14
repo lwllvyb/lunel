@@ -1,5 +1,6 @@
 import Loading from "@/components/Loading";
 import Header from "@/components/Header";
+import { useTranslation } from "react-i18next";
 import { useConnection } from "@/contexts/ConnectionContext";
 import { useSessionRegistryActions } from "@/contexts/SessionRegistry";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -85,35 +86,30 @@ function getDefaultDevsoleState(): DevsoleTabState {
   };
 }
 
-const DEVSOLE_SECTIONS: { id: DevsoleSectionId; label: string; hint: string }[] = [
-  { id: "console", label: "Console", hint: "Runtime logs and JS evaluation" },
-  { id: "proxies", label: "Proxy", hint: "Tracked localhost proxy ports" },
-  { id: "network", label: "Network", hint: "Requests, timings, and payload drill-in" },
-  { id: "elements", label: "Elements", hint: "DOM and inspection primitives" },
-  { id: "resources", label: "Resources", hint: "Storage, cookies, and cached state" },
-  { id: "info", label: "Info", hint: "Session and page diagnostics" },
+const DEVSOLE_SECTIONS: { id: DevsoleSectionId }[] = [
+  { id: "console" },
+  { id: "proxies" },
+  { id: "network" },
+  { id: "elements" },
+  { id: "resources" },
+  { id: "info" },
 ];
 
 const DEVSOLE_STUBS: Record<
   DevsoleSectionId,
   {
-    eyebrow: string;
-    title: string;
-    description: string;
-    bullets: string[];
+    eyebrowKey: string;
+    titleKey: string;
+    descKey: string;
+    bulletKeys: string[];
     metrics: { label: string; value: string }[];
   }
 > = {
   console: {
-    eyebrow: "Structured logs",
-    title: "Console will stream native log rows here",
-    description:
-      "This panel is reserved for level filters, search, expandable values, and high-volume log rendering that feels native inside the browser plugin.",
-    bullets: [
-      "Levels for verbose, info, warning, and error",
-      "Expandable structured values and stack traces",
-      "FlashList-backed rows once real collection lands",
-    ],
+    eyebrowKey: "browser.consoleEyebrow",
+    titleKey: "browser.consoleTitle",
+    descKey: "browser.consoleDesc",
+    bulletKeys: ["browser.consoleBullet1", "browser.consoleBullet2", "browser.consoleBullet3"],
     metrics: [
       { label: "Rows", value: "0 stub" },
       { label: "Filters", value: "4 planned" },
@@ -121,15 +117,10 @@ const DEVSOLE_STUBS: Record<
     ],
   },
   network: {
-    eyebrow: "Request timeline",
-    title: "Network will show requests and drill-in detail",
-    description:
-      "The first real version will prioritize stable request capture, compact list rendering, and reliable detail sections for headers, bodies, and responses.",
-    bullets: [
-      "Method, status, type, size, and duration",
-      "Request detail for headers and payloads",
-      "Safe handling when metadata is partial",
-    ],
+    eyebrowKey: "browser.networkEyebrow",
+    titleKey: "browser.networkTitle",
+    descKey: "browser.networkDesc",
+    bulletKeys: ["browser.networkBullet1", "browser.networkBullet2", "browser.networkBullet3"],
     metrics: [
       { label: "Requests", value: "0 stub" },
       { label: "Selection", value: "Ready" },
@@ -137,15 +128,10 @@ const DEVSOLE_STUBS: Record<
     ],
   },
   elements: {
-    eyebrow: "Inspection scope",
-    title: "Elements is scoped before implementation",
-    description:
-      "We are not copying desktop devtools blindly. This section will expose only what the app browser can support reliably and cleanly.",
-    bullets: [
-      "Select only the primitives we can support well",
-      "Fallback UI if live inspection is limited",
-      "Breadcrumb and detail surfaces reserved in the layout",
-    ],
+    eyebrowKey: "browser.elementsEyebrow",
+    titleKey: "browser.elementsTitle",
+    descKey: "browser.elementsDesc",
+    bulletKeys: ["browser.elementsBullet1", "browser.elementsBullet2", "browser.elementsBullet3"],
     metrics: [
       { label: "Mode", value: "Scoping" },
       { label: "Overlay", value: "TBD" },
@@ -153,15 +139,10 @@ const DEVSOLE_STUBS: Record<
     ],
   },
   resources: {
-    eyebrow: "Storage and assets",
-    title: "Resources will group browser-owned data",
-    description:
-      "This section is reserved for cookies, local storage, session storage, and other resource snapshots that the browser plugin can expose safely.",
-    bullets: [
-      "Sectioned cards instead of web-style tables",
-      "Copy-friendly key/value presentation",
-      "Stable empty and refresh states first",
-    ],
+    eyebrowKey: "browser.resourcesEyebrow",
+    titleKey: "browser.resourcesTitle",
+    descKey: "browser.resourcesDesc",
+    bulletKeys: ["browser.resourcesBullet1", "browser.resourcesBullet2", "browser.resourcesBullet3"],
     metrics: [
       { label: "Stores", value: "3 planned" },
       { label: "Refresh", value: "Manual" },
@@ -169,15 +150,10 @@ const DEVSOLE_STUBS: Record<
     ],
   },
   info: {
-    eyebrow: "Session diagnostics",
-    title: "Info stays compact and high-signal",
-    description:
-      "This panel will show the metadata that helps orient the rest of devsole quickly without turning into a dumping ground.",
-    bullets: [
-      "Current page and session context",
-      "Platform and runtime diagnostics",
-      "Fast copy actions for debugging later",
-    ],
+    eyebrowKey: "browser.infoEyebrow",
+    titleKey: "browser.infoTitle",
+    descKey: "browser.infoDesc",
+    bulletKeys: ["browser.infoBullet1", "browser.infoBullet2", "browser.infoBullet3"],
     metrics: [
       { label: "Fields", value: "Lean" },
       { label: "Latency", value: "Low" },
@@ -185,15 +161,10 @@ const DEVSOLE_STUBS: Record<
     ],
   },
   proxies: {
-    eyebrow: "Localhost forwarding",
-    title: "Proxy tracking is managed globally",
-    description:
-      "Tracked localhost ports are shared across the whole app session, not per browser tab, so this section stays global while the rest of devsole remains page-specific.",
-    bullets: [
-      "Track localhost ports explicitly from here or via the CLI --extra-ports flag",
-      "See which tracked ports are currently open on the CLI machine",
-      "Only tracked ports are exposed on phone localhost",
-    ],
+    eyebrowKey: "browser.proxiesEyebrow",
+    titleKey: "browser.proxiesTitle",
+    descKey: "browser.proxiesDesc",
+    bulletKeys: ["browser.proxiesBullet1", "browser.proxiesBullet2", "browser.proxiesBullet3"],
     metrics: [
       { label: "Scope", value: "Global" },
       { label: "Action", value: "Track" },
@@ -203,6 +174,7 @@ const DEVSOLE_STUBS: Record<
 };
 
 export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
+  const { t } = useTranslation();
   const { colors, radius, fonts, isDark } = useTheme();
   const { discoveredProxyPorts, trackedProxyPorts, refreshProxyState, trackProxyPort, untrackProxyPort } = useConnection();
   const { register, unregister } = useSessionRegistryActions();
@@ -1719,7 +1691,7 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
     const newTab: Tab = {
       id: newId,
       url: "https://www.google.com",
-      title: "New Tab",
+      title: t('browser.newTab'),
       loading: false,
       ready: false,
     };
@@ -2111,7 +2083,7 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
     <View style={{ flex: 1, backgroundColor: colors.bg.base }}>
       {/* Header */}
       <Header
-        title={activeTab?.title || "Browser"}
+        title={activeTab?.title || t('nav.browser')}
         colors={colors}
         showBottomBorder={false}
 
@@ -2230,7 +2202,7 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
                   setTimeout(() => setFocusSelection(undefined), 50);
                 }}
                 onBlur={() => setIsFocused(false)}
-                placeholder="Search or enter website name"
+                placeholder={t('browser.searchPlaceholder')}
                 placeholderTextColor={colors.fg.muted}
                 style={
                   {
@@ -2294,7 +2266,7 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
                     fontFamily: fonts.sans.semibold,
                   }}
                 >
-                  DevTools
+                  {t('browser.devTools')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -2314,7 +2286,7 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
             <View style={{ alignItems: "center", gap: 8 }}>
               <SquareMousePointer size={48} color={colors.fg.muted} strokeWidth={1.5} />
               <Text style={{ color: colors.fg.muted, fontSize: 16, fontFamily: fonts.sans.regular }}>
-                No tabs open
+                {t('common.noTabsOpen')}
               </Text>
             </View>
             <TouchableOpacity
@@ -2334,7 +2306,7 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
                   fontFamily: fonts.sans.medium,
                 }}
               >
-                Open New Tab
+                {t('common.openNewTab')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -2620,7 +2592,7 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
                             fontFamily: isActive ? fonts.sans.semibold : fonts.sans.medium,
                           }}
                         >
-                          {section.label}
+                          {t(`browser.section${section.id.charAt(0).toUpperCase() + section.id.slice(1)}`)}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -2772,7 +2744,7 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
                     letterSpacing: 0.5,
                   }}
                 >
-                  {activeDevsoleStub.eyebrow.toUpperCase()}
+                  {t(activeDevsoleStub.eyebrowKey).toUpperCase()}
                 </Text>
                 <Text
                   style={{
@@ -2782,7 +2754,7 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
                     fontFamily: fonts.sans.semibold,
                   }}
                 >
-                  {activeDevsoleStub.title}
+                  {t(activeDevsoleStub.titleKey)}
                 </Text>
                 <Text
                   style={{
@@ -2792,7 +2764,7 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
                     fontFamily: fonts.sans.regular,
                   }}
                 >
-                  {activeDevsoleStub.description}
+                  {t(activeDevsoleStub.descKey)}
                 </Text>
               </View>
 
@@ -2859,7 +2831,7 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
                       fontFamily: fonts.sans.semibold,
                     }}
                   >
-                    Planned behavior
+                    {t('browser.plannedBehavior')}
                   </Text>
                   <Text
                     style={{
@@ -2872,9 +2844,9 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
                   </Text>
                 </View>
 
-                {activeDevsoleStub.bullets.map((item) => (
+                {activeDevsoleStub.bulletKeys.map((key) => (
                   <View
-                    key={item}
+                    key={key}
                     style={{
                       flexDirection: "row",
                       alignItems: "flex-start",
@@ -2899,7 +2871,7 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
                         fontFamily: fonts.sans.regular,
                       }}
                     >
-                      {item}
+                      {t(key)}
                     </Text>
                   </View>
                 ))}
@@ -2965,7 +2937,7 @@ export default function BrowserPanel({ bottomBarHeight }: PluginPanelProps) {
                       fontFamily: fonts.sans.medium,
                     }}
                   >
-                    {DEVSOLE_SECTIONS.find((section) => section.id === activeDevsoleSection)?.hint}
+                    {t(`browser.hint${activeDevsoleSection.charAt(0).toUpperCase() + activeDevsoleSection.slice(1)}`)}
                   </Text>
                 </View>
               </View>

@@ -1,6 +1,7 @@
 import { FlashList } from "@shopify/flash-list";
 import * as Clipboard from "expo-clipboard";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useTranslation } from "react-i18next";
 import { Check, ChevronDown, ChevronRight, Copy, MousePointerClick, Plus, RefreshCw, SquarePen, X } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Modal, Pressable, ScrollView, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from "react-native";
@@ -230,6 +231,7 @@ function ElementDetailSheet({
   onSaveAttributeRow: (index: number) => void;
   onSaveStyleRow: (index: number) => void;
 }) {
+  const { t } = useTranslation();
   const { colors, fonts, radius } = useTheme();
   const { height: windowHeight } = useWindowDimensions();
   const scrollRef = useRef<ScrollView | null>(null);
@@ -381,7 +383,7 @@ function ElementDetailSheet({
                 fontFamily: fonts.sans.semibold,
               }}
             >
-              {snapshot?.label || "Element"}
+              {snapshot?.label || t('browser.elementsDefault')}
             </Text>
 
             <TouchableOpacity
@@ -505,7 +507,7 @@ function ElementDetailSheet({
                 value={textDraft}
                 onChangeText={onChangeTextDraft}
                 multiline
-                placeholder="Direct text only"
+                placeholder={t('browser.elementsTextPlaceholder')}
                 placeholderTextColor={colors.fg.subtle}
                 style={{
                   height: 82,
@@ -626,7 +628,7 @@ function ElementDetailSheet({
                       }}
                       value={row.name}
                       onChangeText={(value) => onChangeAttributeRow(index, "name", value)}
-                      placeholder="attribute"
+                      placeholder={t('browser.elementsAttrPlaceholder')}
                       placeholderTextColor={colors.fg.subtle}
                       style={{
                         width: 120,
@@ -646,7 +648,7 @@ function ElementDetailSheet({
                     <TextInput
                       value={row.value}
                       onChangeText={(value) => onChangeAttributeRow(index, "value", value)}
-                      placeholder="value"
+                      placeholder={t('browser.elementsValuePlaceholder')}
                       placeholderTextColor={colors.fg.subtle}
                       style={{
                         flex: 1,
@@ -743,7 +745,7 @@ function ElementDetailSheet({
                     fontFamily: fonts.sans.regular,
                   }}
                 >
-                  No inline styles yet.
+                  {t('browser.elementsNoStyles')}
                 </Text>
               ) : null}
 
@@ -767,7 +769,7 @@ function ElementDetailSheet({
                     }}
                     value={row.name}
                     onChangeText={(value) => onChangeStyleRow(index, "name", value)}
-                    placeholder="property"
+                    placeholder={t('browser.elementsPropPlaceholder')}
                     placeholderTextColor={colors.fg.subtle}
                     style={{
                       width: 120,
@@ -787,7 +789,7 @@ function ElementDetailSheet({
                   <TextInput
                     value={row.value}
                     onChangeText={(value) => onChangeStyleRow(index, "value", value)}
-                    placeholder="value"
+                    placeholder={t('browser.elementsValuePlaceholder')}
                     placeholderTextColor={colors.fg.subtle}
                     style={{
                       flex: 1,
@@ -862,6 +864,7 @@ export default function ElementsSection({
   onSaveDirectTextContent: (path: string, value: string) => void;
   onSaveAttribute: (path: string, attributes: DevsoleElementsAttribute[]) => void;
 }) {
+  const { t } = useTranslation();
   const { colors, fonts, radius } = useTheme();
   const listRef = useRef<FlashList<TreeNode> | null>(null);
   const lastAppliedFocusTokenRef = useRef(0);
@@ -1065,10 +1068,10 @@ export default function ElementsSection({
         ) : (
           <View style={{ flex: 1, gap: 1 }}>
             <Text numberOfLines={1} style={{ color: colors.fg.default, fontSize: 11, fontFamily: fonts.sans.semibold }}>
-              No DOM snapshot yet
+              {t('browser.elementsNoSnapshot')}
             </Text>
             <Text numberOfLines={1} style={{ color: colors.fg.muted, fontSize: 9, fontFamily: fonts.sans.medium, textTransform: "uppercase" }}>
-              Load the page or pick an element
+              {t('browser.elementsLoadHint')}
             </Text>
           </View>
         )}
@@ -1113,7 +1116,7 @@ export default function ElementsSection({
               fontFamily: fonts.sans.regular,
             }}
           >
-            Open the Elements tab on a loaded page or use the picker to inspect the current DOM tree.
+            {t('browser.elementsPickerHint')}
           </Text>
         </View>
       ) : (

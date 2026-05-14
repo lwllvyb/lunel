@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Terminal, SquaresSubtract } from "lucide-react-native";
 import Svg, { Path } from "react-native-svg";
+import { useTranslation } from "react-i18next";
 import { useEditorConfig } from "@/contexts/EditorContext";
 import { typography } from "@/constants/themes";
 import type { AIPart, AIPermission, PermissionResponse } from "./types";
@@ -257,6 +258,7 @@ export default function ToolCall({
   groupedRow = false,
 }: ToolCallProps) {
   const [expanded, setExpanded] = useState(false);
+  const { t } = useTranslation();
   const { config } = useEditorConfig();
 
   const toolName = (part.name as string) || (part.toolName as string) || "tool";
@@ -472,21 +474,21 @@ export default function ToolCall({
                   style={[styles.permButton, { backgroundColor: colors.bg.raised, borderRadius: BOX_RADIUS }]}
                   activeOpacity={0.7}
                 >
-                  <Text style={{ color: colors.fg.default, fontSize: 12, fontFamily: fonts.sans.medium }}>Deny</Text>
+                  <Text style={{ color: colors.fg.default, fontSize: 12, fontFamily: fonts.sans.medium }}>{t('aiPanel.deny')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => onPermissionReply?.("always")}
                   style={[styles.permButton, { backgroundColor: colors.bg.raised, borderRadius: BOX_RADIUS }]}
                   activeOpacity={0.7}
                 >
-                  <Text style={{ color: colors.fg.default, fontSize: 12, fontFamily: fonts.sans.medium }}>Always</Text>
+                  <Text style={{ color: colors.fg.default, fontSize: 12, fontFamily: fonts.sans.medium }}>{t('aiPanel.alwaysAllow')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => onPermissionReply?.("once")}
                   style={[styles.permButton, { backgroundColor: colors.accent.default, borderRadius: BOX_RADIUS }]}
                   activeOpacity={0.7}
                 >
-                  <Text style={{ color: '#ffffff', fontSize: 12, fontFamily: fonts.sans.medium }}>Allow</Text>
+                  <Text style={{ color: '#ffffff', fontSize: 12, fontFamily: fonts.sans.medium }}>{t('aiPanel.allowOnce')}</Text>
                 </TouchableOpacity>
               </View>
             </View>

@@ -1,5 +1,6 @@
 import Loading from "@/components/Loading";
 import Header from "@/components/Header";
+import { useTranslation } from "react-i18next";
 import { Message, useConnection } from "@/contexts/ConnectionContext";
 import { useEditorConfig } from "@/contexts/EditorContext";
 import { useReviewPrompt } from "@/contexts/ReviewPromptContext";
@@ -300,6 +301,7 @@ function createEditorHtml({
 }
 
 export default function EditorPanel({ bottomBarHeight: _bottomBarHeight }: PluginPanelProps) {
+  const { t } = useTranslation();
   const { colors, fonts, fontSelection, isDark } = useTheme();
   const { fireData, onDataEvent } = useConnection();
   const { openTab, setDrawerContentVariant } = usePlugins();
@@ -431,7 +433,7 @@ export default function EditorPanel({ bottomBarHeight: _bottomBarHeight }: Plugi
         })
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to save file";
+      const message = error instanceof Error ? error.message : t('editor.failedSaveFile');
       setTabs((prev) =>
         prev.map((tab) =>
           tab.id === tabId
@@ -523,15 +525,15 @@ export default function EditorPanel({ bottomBarHeight: _bottomBarHeight }: Plugi
     try {
       const stat = await fs.stat(filePath);
       if (stat.type !== "file") {
-        throw new Error("Only files can be opened in the editor");
+        throw new Error(t('editor.onlyFilesAllowed'));
       }
       if (stat.isBinary) {
-        throw new Error("Binary files cannot be opened in the editor");
+        throw new Error(t('editor.binaryFilesNotAllowed'));
       }
 
       const result = await fs.read(filePath);
       if (result.encoding !== "utf8") {
-        throw new Error("Binary files cannot be opened in the editor");
+        throw new Error(t('editor.binaryFilesNotAllowed'));
       }
 
       webViewContentRef.current[tabId] = result.content;
@@ -550,7 +552,7 @@ export default function EditorPanel({ bottomBarHeight: _bottomBarHeight }: Plugi
         )
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to open file";
+      const message = error instanceof Error ? error.message : t('editor.failedOpenFile');
       setTabs((prev) => prev.filter((tab) => tab.id !== tabId));
       setActiveTabId((currentActiveTabId) => (currentActiveTabId === tabId ? null : currentActiveTabId));
       throw new Error(message);
@@ -601,7 +603,7 @@ export default function EditorPanel({ bottomBarHeight: _bottomBarHeight }: Plugi
     );
 
     if (deletedTabTitle) {
-      Alert.alert("File deleted", `"${deletedTabTitle}" was removed and is now read-only in the editor.`);
+      Alert.alert(t('editor.fileDeletedTitle'), t('editor.fileDeletedDesc', { title: deletedTabTitle }));
     }
   }, [clearSaveTimer, fireData]);
 
@@ -609,7 +611,7 @@ export default function EditorPanel({ bottomBarHeight: _bottomBarHeight }: Plugi
     logger.info("editor-sync", "reloading tab from disk", { tabId, path: filePath });
     const result = await fs.read(filePath);
     if (result.encoding !== "utf8") {
-      throw new Error("Binary files cannot be opened in the editor");
+      throw new Error(t('editor.binaryFilesNotAllowed'));
     }
 
     webViewContentRef.current[tabId] = result.content;
@@ -762,7 +764,7 @@ export default function EditorPanel({ bottomBarHeight: _bottomBarHeight }: Plugi
       }
 
       void reloadTabFromDisk(trackedTab.id, trackedTab.path).catch((error) => {
-        const messageText = error instanceof Error ? error.message : "Failed to refresh file";
+        const messageText = error instanceof Error ? error.message : t('editor.failedRefreshFile');
         logger.error("editor-sync", "failed to reload tab from disk", {
           tabId: trackedTab.id,
           path: trackedTab.path,
@@ -874,7 +876,7 @@ export default function EditorPanel({ bottomBarHeight: _bottomBarHeight }: Plugi
     const webFont = getWebFontConfig(fontSelection.mono);
 
     return createEditorHtml({
-      placeholder: "Start typing...",
+      placeholder: t('editor.startTypingPlaceholder'),
       backgroundColor: editorBackground,
       foregroundColor: editorForeground,
       placeholderColor: colors.fg.subtle,
@@ -1097,7 +1099,7 @@ export default function EditorPanel({ bottomBarHeight: _bottomBarHeight }: Plugi
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <Header
-        title={activeTab?.title || "Editor"}
+        title={activeTab?.title || t('nav.editor')}
         colors={colors}
         showBottomBorder={!!activeTab && !isSearchOpen}
         rightAccessoryWidth={showEditorReviewButton ? 172 : 100}
@@ -1112,7 +1114,7 @@ export default function EditorPanel({ bottomBarHeight: _bottomBarHeight }: Plugi
                 ref={searchInputRef}
                 value={searchQuery}
                 onChangeText={handleSearchQueryChange}
-                placeholder="Search..."
+                placeholder={t('editor.searchPlaceholder')}
                 placeholderTextColor={colors.fg.subtle}
                 style={[styles.searchInput, { color: colors.fg.default, backgroundColor: colors.bg.raised, fontFamily: fonts.sans.regular }]}
                 autoCorrect={false}
@@ -1142,7 +1144,7 @@ export default function EditorPanel({ bottomBarHeight: _bottomBarHeight }: Plugi
                 activeOpacity={0.7}
               >
                 <Text style={[styles.textBtnLabel, { color: showReplace ? "#fff" : colors.fg.muted, fontFamily: fonts.sans.medium }]}>
-                  Replace
+                  {t('editor.replace')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1151,7 +1153,7 @@ export default function EditorPanel({ bottomBarHeight: _bottomBarHeight }: Plugi
                 <TextInput
                   value={replaceQuery}
                   onChangeText={handleReplaceQueryChange}
-                  placeholder="Replace with..."
+                  placeholder={t('editor.replacePlaceholder')}
                   placeholderTextColor={colors.fg.subtle}
                   style={[styles.searchInput, { color: colors.fg.default, backgroundColor: colors.bg.raised, fontFamily: fonts.sans.regular }]}
                   autoCorrect={false}
@@ -1163,14 +1165,14 @@ export default function EditorPanel({ bottomBarHeight: _bottomBarHeight }: Plugi
                   style={[styles.textBtn, { backgroundColor: colors.bg.raised }]}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.textBtnLabel, { color: colors.fg.default, fontFamily: fonts.sans.medium }]}>Replace</Text>
+                  <Text style={[styles.textBtnLabel, { color: colors.fg.default, fontFamily: fonts.sans.medium }]}>{t('editor.replace')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handleReplaceAll}
                   style={[styles.textBtn, { backgroundColor: colors.bg.raised }]}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.textBtnLabel, { color: colors.fg.default, fontFamily: fonts.sans.medium }]}>All</Text>
+                  <Text style={[styles.textBtnLabel, { color: colors.fg.default, fontFamily: fonts.sans.medium }]}>{t('editor.replaceAll')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -1190,7 +1192,7 @@ export default function EditorPanel({ bottomBarHeight: _bottomBarHeight }: Plugi
               <View style={{ alignItems: "center", gap: 8 }}>
                 <File size={48} color={colors.fg.muted} strokeWidth={1.5} />
                 <Text style={{ color: colors.fg.muted, fontSize: 16, fontFamily: fonts.sans.regular }}>
-                  No files open
+                  {t('common.noFilesOpen')}
                 </Text>
               </View>
               <TouchableOpacity
@@ -1210,7 +1212,7 @@ export default function EditorPanel({ bottomBarHeight: _bottomBarHeight }: Plugi
                     fontFamily: fonts.sans.medium,
                   }}
                 >
-                  Open Explorer
+                  {t('common.openExplorer')}
                 </Text>
               </TouchableOpacity>
             </View>

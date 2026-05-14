@@ -8,6 +8,7 @@ import {
 import { Check, Info } from "lucide-react-native";
 import { Stack, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { useTranslation } from "react-i18next";
 
 import React from "react";
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -23,6 +24,7 @@ interface FontOptionProps {
 
 function FontOption({ name, sampleText, fontFamily, isSelected, isDefault, onSelect }: FontOptionProps) {
   const { colors, fonts, spacing, radius, typography } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <TouchableOpacity
@@ -51,7 +53,7 @@ function FontOption({ name, sampleText, fontFamily, isSelected, isDefault, onSel
           {isDefault && (
             <View style={{ backgroundColor: colors.accent.default + '30', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
               <Text style={{ fontSize: typography.caption, fontFamily: fonts.sans.medium, color: colors.accent.default }}>
-                Default
+                {t('fontNormal.default')}
               </Text>
             </View>
           )}
@@ -96,6 +98,7 @@ export default function NormalFontPage() {
   } = useTheme();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
+  const { t } = useTranslation();
 
   const normalFontIds = Object.keys(normalFamilies) as NormalFamilyId[];
 
@@ -103,7 +106,7 @@ export default function NormalFontPage() {
     <View style={[styles.container, { backgroundColor: colors.bg.base }]}>
       <Stack.Screen options={{ headerShown: false }} />
       <Header
-        title="Normal Font"
+        title={t('fontNormal.title')}
         colors={colors}
         onBack={() => router.back()}
         rightAccessory={(
@@ -111,8 +114,8 @@ export default function NormalFontPage() {
             onPress={() => {
               void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               Alert.alert(
-                "Normal Font",
-                "Used for UI text, labels, and most readable content.\n\nChoose a clean, balanced font for long reading sessions.\nIt has the biggest impact on overall app readability."
+                t('fontNormal.alertTitle'),
+                t('fontNormal.alertMessage')
               );
             }}
             style={{ padding: 8 }}
@@ -135,7 +138,7 @@ export default function NormalFontPage() {
               <FontOption
                 key={id}
                 name={family.name}
-                sampleText="The quick brown fox jumps over the lazy dog"
+                sampleText={t('fontNormal.sampleText')}
                 fontFamily={family.regular}
                 isSelected={fontSelection.normal === id}
                 isDefault={id === DEFAULT_FONT_SELECTION.normal}

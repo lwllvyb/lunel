@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Text,
   TouchableOpacity,
@@ -147,6 +148,7 @@ function UsageStream({
 }
 
 function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
+  const { t } = useTranslation();
   const { colors, fonts, spacing, radius } = useTheme();
   const headerHeight = useHeaderHeight();
   const { monitor: monitorApi, isConnected } = useApi();
@@ -214,7 +216,7 @@ function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
   if (!isConnected) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.terminal.bg }}>
-        <Header title="Monitor" colors={colors} />
+        <Header title={t('nav.monitor')} colors={colors} />
         <NotConnected colors={colors} fonts={fonts} />
       </View>
     );
@@ -314,7 +316,7 @@ function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.terminal.bg }}>
-      <Header title="Monitor" colors={colors} />
+      <Header title={t('nav.monitor')} colors={colors} />
 
       {error && (
         <View style={{
@@ -342,7 +344,7 @@ function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing[6] }}>
           <Activity size={40} color={colors.fg.subtle} />
           <Text style={{ fontSize: 13, fontFamily: fonts.sans.medium, color: colors.fg.muted, marginTop: spacing[3] }}>
-            No data available
+            {t('monitor.noData')}
           </Text>
         </View>
       ) : (
@@ -452,7 +454,7 @@ function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
           <Card>
             <SectionHeader
               icon={null}
-              label="Memory"
+              label={t('monitor.memory')}
               right={
                 <Text style={{ fontSize: 22, fontFamily: fonts.mono.regular, color: getUsageColor(systemInfo.memory.usedPercent) }}>
                   {systemInfo.memory.usedPercent.toFixed(0)}%
@@ -469,9 +471,9 @@ function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
             </View>
             <StatTable
               rows={[
-                { label: 'Used', value: formatBytes(systemInfo.memory.used), valueColor: getUsageColor(systemInfo.memory.usedPercent) },
-                { label: 'Free', value: formatBytes(systemInfo.memory.free), valueColor: colors.terminal.green },
-                { label: 'Total', value: formatBytes(systemInfo.memory.total) },
+                { label: t('monitor.used'), value: formatBytes(systemInfo.memory.used), valueColor: getUsageColor(systemInfo.memory.usedPercent) },
+                { label: t('monitor.free'), value: formatBytes(systemInfo.memory.free), valueColor: colors.terminal.green },
+                { label: t('monitor.total'), value: formatBytes(systemInfo.memory.total) },
               ]}
             />
           </Card>
@@ -481,7 +483,7 @@ function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
             <Card>
               <SectionHeader
                 icon={<HardDrive size={12} color={colors.fg.subtle} />}
-                label="Disk"
+                label={t('monitor.disk')}
               />
               {systemInfo.disk.map((d, i) => {
                 const color = getUsageColor(d.usedPercent);
@@ -520,7 +522,7 @@ function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
               <Card>
                 <SectionHeader
                   icon={null}
-                  label="Battery"
+                  label={t('monitor.battery')}
                   right={
                     <Text style={{ fontSize: 22, fontFamily: fonts.mono.regular, color }}>
                       {pct.toFixed(0)}%
@@ -537,10 +539,10 @@ function MonitorPanel({ instanceId, isActive }: PluginPanelProps) {
                 </View>
                 <StatTable
                   rows={[
-                    { label: 'Status', value: charging ? 'Charging' : 'Discharging', valueColor: color },
+                    { label: t('monitor.status'), value: charging ? t('monitor.charging') : t('monitor.discharging'), valueColor: color },
                     ...(systemInfo.battery.timeRemaining != null
                       ? [{
-                          label: charging ? 'Full in' : 'Remaining',
+                          label: charging ? t('monitor.fullIn') : t('monitor.remaining'),
                           value: `${Math.floor(systemInfo.battery.timeRemaining / 60)}h ${systemInfo.battery.timeRemaining % 60}m`,
                         }]
                       : []),

@@ -1,4 +1,5 @@
 import { useTheme } from "@/contexts/ThemeContext";
+import { useTranslation } from "react-i18next";
 import { PairedSession, useConnection } from "@/contexts/ConnectionContext";
 import { logger } from "@/lib/logger";
 import InfoSheet from "@/components/InfoSheet";
@@ -83,6 +84,7 @@ function SessionActionsSheet({
   onDelete: (session: PairedSession) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const pastSheetRadius = Math.max(Number(radius?.["2xl"] ?? 24), 36);
   const [modalVisible, setModalVisible] = useState(false);
   const backdropOpacity = useSharedValue(0);
@@ -177,7 +179,7 @@ function SessionActionsSheet({
               >
                 <OpenActionIcon color={colors.fg.default} />
                 <Text style={[styles.sheetRowLabel, { color: colors.fg.default, fontFamily: fonts.sans.semibold }]}>
-                  Open
+                  {t('auth.openAction')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -187,7 +189,7 @@ function SessionActionsSheet({
               >
                 <DeleteActionIcon color={colors.git.deleted} />
                 <Text style={[styles.sheetDeleteLabel, { color: colors.git.deleted, fontFamily: fonts.sans.semibold }]}>
-                  Delete
+                  {t('auth.deleteAction')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -216,13 +218,14 @@ function PastSessionsSheet({
   onClose: () => void;
 }) {
   const { typography } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <InfoSheet
       visible={visible}
       onClose={onClose}
-      title="Past Sessions"
-      description="Tap to open · Long press to delete"
+      title={t('auth.pastSessionsSheetTitle')}
+      description={t('auth.pastSessionsSheetDesc')}
     >
       {sessions.length === 0 ? (
         <View style={pastSessionsSheetStyles.emptyContainer}>
@@ -238,7 +241,7 @@ function PastSessionsSheet({
               { color: colors.fg.muted, fontFamily: fonts.sans.regular },
             ]}
           >
-            No past sessions
+            {t('auth.noPastSessions')}
           </Text>
         </View>
       ) : (
@@ -280,6 +283,7 @@ function PastSessionsSheet({
 
 export default function Auth() {
   const { colors, fonts, radius, isDark } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const ctaRadius = 16;
   const router = useRouter();
@@ -350,12 +354,12 @@ export default function Auth() {
     try {
       const canOpen = await Linking.canOpenURL(url);
       if (!canOpen) {
-        Alert.alert("Unable to open link", "Please try again later.");
+        Alert.alert(t('auth.unableOpenLinkTitle'), t('auth.unableOpenLinkDesc'));
         return;
       }
       await Linking.openURL(url);
     } catch {
-      Alert.alert("Unable to open link", "Please try again later.");
+      Alert.alert(t('auth.unableOpenLinkTitle'), t('auth.unableOpenLinkDesc'));
     }
   }, []);
 
@@ -418,9 +422,9 @@ export default function Auth() {
       if (isExpiredSession) {
         await removePairedSession(session.sessionPassword);
         setPairedSessions((current) => current.filter((entry) => entry.sessionPassword !== session.sessionPassword));
-        Alert.alert("Session Unavailable", "That saved connection is no longer available. Please scan again.");
+        Alert.alert(t('auth.sessionUnavailableTitle'), t('auth.sessionUnavailableDesc'));
       } else {
-        Alert.alert("Unable to Connect", "Could not reach the session right now. Please try again.");
+        Alert.alert(t('auth.unableConnectTitle'), t('auth.unableConnectDesc'));
       }
     } finally {
       setIsContinuing(false);
@@ -443,7 +447,7 @@ export default function Auth() {
       setPairedSessions((current) => current.filter((entry) => entry.sessionPassword !== session.sessionPassword));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not delete saved session.";
-      Alert.alert("Unable to Delete", message);
+      Alert.alert(t('auth.unableDeleteTitle'), message);
     }
   }, [removePairedSession, revokePairedSession]);
 
@@ -452,12 +456,12 @@ export default function Auth() {
     setShowPastSessionsSheet(false);
     setTimeout(() => {
       Alert.alert(
-        'Connect to Session',
+        t('auth.connectToSessionTitle'),
         `${session.hostname}\n${session.root}`,
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Connect',
+            text: t('common.connect'),
             onPress: () => {
               setTimeout(() => {
                 void handlePairedSession(session);
@@ -471,12 +475,12 @@ export default function Auth() {
 
   const handleSessionLongPress = useCallback((session: PairedSession) => {
     Alert.alert(
-      "Delete saved session?",
+      t('auth.deleteSessionTitle'),
       `${session.hostname}\n${session.root}`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t('common.cancel'), style: "cancel" },
         {
-          text: "Delete",
+          text: t('common.delete'),
           style: "destructive",
           onPress: () => {
             void handleDeleteSession(session);
@@ -508,7 +512,7 @@ export default function Auth() {
           ]}
         >
           <Text style={[styles.updateBannerTitle, { color: colors.fg.default, fontFamily: fonts.sans.semibold }]}>
-            Oops, your app is too outdated and needs to be updated
+            {t('auth.updateTitle')}
           </Text>
           <TouchableOpacity
             onPress={() => openExternalUrl(getPreferredUpdateUrl(availableUpdate))}
@@ -522,7 +526,7 @@ export default function Auth() {
             ]}
           >
             <Text style={[styles.updateBannerButtonText, { color: colors.bg.base, fontFamily: fonts.sans.semibold }]}>
-              Click here to update
+              {t('auth.updateButton')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -542,10 +546,10 @@ export default function Auth() {
               />
               <View style={styles.brandText}>
                 <Text style={[styles.appName, { color: colors.fg.default, fontFamily: fonts.sans.semibold }]}>
-                  Lunel
+                  {t('auth.appName')}
                 </Text>
                 <Text style={[styles.tagline, { color: colors.fg.muted, fontFamily: fonts.sans.regular }]}>
-                  Ship from Anywhere
+                  {t('auth.tagline')}
                 </Text>
               </View>
             </View>
@@ -561,7 +565,7 @@ export default function Auth() {
             >
               <ScanLine size={20} color={colors.bg.base} strokeWidth={2} />
               <Text style={[styles.btnText, isTablet && styles.btnTextTablet, { color: colors.bg.base, fontFamily: fonts.sans.medium }]}>
-                Scan with Lunel Connect
+                {t('auth.scanConnect')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -571,20 +575,20 @@ export default function Auth() {
             >
               <History size={21} color={colors.fg.default} strokeWidth={2} />
               <Text style={[styles.pastSessionsButtonText, { color: colors.fg.default, fontFamily: fonts.sans.medium }]}>
-                Past Sessions
+                {t('auth.pastSessions')}
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
 <Text style={[styles.legal, isTablet && styles.legalTablet, { color: colors.fg.muted, fontFamily: fonts.sans.regular }]}>
-          By continuing, you agree to our{" "}
+          {t('auth.legal')}{" "}
           <Text style={[styles.legalLink, { color: colors.fg.default, fontFamily: fonts.sans.regular }]} onPress={() => openExternalUrl(TERMS_URL)}>
-            Terms of Service
+            {t('auth.termsOfService')}
           </Text>
-          {" "}and{" "}
+          {" "}{t('auth.and')}{" "}
           <Text style={[styles.legalLink, { color: colors.fg.default, fontFamily: fonts.sans.regular }]} onPress={() => openExternalUrl(PRIVACY_URL)}>
-            Privacy Policy
+            {t('auth.privacyPolicy')}
           </Text>
           .
         </Text>
@@ -605,10 +609,10 @@ export default function Auth() {
               <Loader2 size={26} color={colors.fg.default} strokeWidth={2.25} />
             </Animated.View>
             <Text style={[styles.loadingTitle, { color: colors.fg.default, fontFamily: fonts.sans.medium }]}>
-              Connecting
+              {t('auth.connectingTitle')}
             </Text>
             <Text style={[styles.loadingSubtitle, { color: colors.fg.muted, fontFamily: fonts.sans.regular }]}>
-              {`Connecting to ${connectingHostname}...`}
+              {t('auth.connectingTo', { hostname: connectingHostname })}
             </Text>
             <TouchableOpacity
               onPress={handleCancelContinue}
@@ -616,7 +620,7 @@ export default function Auth() {
               style={[styles.loadingCancelButton, { backgroundColor: isDark ? "#FFFFFF" : "#000000" }]}
             >
               <Text style={[styles.loadingCancelText, { color: isDark ? "#000000" : "#FFFFFF", fontFamily: fonts.sans.semibold }]}>
-                Cancel
+                {t('common.cancel')}
               </Text>
             </TouchableOpacity>
           </View>

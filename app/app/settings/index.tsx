@@ -1,7 +1,8 @@
 import { useTheme } from "@/contexts/ThemeContext";
 import Header, { useHeaderHeight } from "@/components/Header";
-import { ChevronRight, LucideIcon, Palette, Type, Code, Sparkles, MoonStar, Shell } from "lucide-react-native";
+import { ChevronRight, LucideIcon, Palette, Type, Code, Sparkles, MoonStar, Shell, Globe } from "lucide-react-native";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import React from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -38,26 +39,27 @@ export default function SettingsPage() {
   const { colors, fonts, radius, spacing, typography } = useTheme();
   const router = useRouter();
   const headerHeight = useHeaderHeight();
+  const { t } = useTranslation();
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg.base }]}>
-      <Header title="Settings" colors={colors} onBack={() => router.back()} />
+      <Header title={t('settings.title')} colors={colors} onBack={() => router.back()} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
         {/* Appearance Section */}
         <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: typography.caption }]}>
-          APPEARANCE
+          {t('settings.appearance')}
         </Text>
         <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 10 }]}>
           <SettingsRow
             icon={Palette}
-            label="Theme"
+            label={t('settings.theme')}
             onPress={() => router.push("/settings/appearance/theme")}
           />
           <View style={[styles.divider, { backgroundColor: colors.border.tertiary }]} />
           <SettingsRow
             icon={Type}
-            label="Fonts"
+            label={t('settings.fonts')}
             onPress={() => router.push("/settings/appearance/fonts")}
           />
           {/* <View style={[styles.divider, { backgroundColor: colors.border.tertiary }]} />
@@ -70,41 +72,52 @@ export default function SettingsPage() {
 
         {/* Editor Section */}
         <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: typography.caption }]}>
-          EDITOR
+          {t('settings.editor')}
         </Text>
         <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 10 }]}>
           <SettingsRow
             icon={Code}
-            label="Editor Settings"
+            label={t('settings.editorSettings')}
             onPress={() => router.push("/settings/editor")}
           />
         </View>
 
         <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: typography.caption }]}>
-          APP
+          {t('settings.app')}
         </Text>
         <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 10 }]}>
           <SettingsRow
             icon={MoonStar}
-            label="App Settings"
+            label={t('settings.appSettings')}
             onPress={() => router.push("/settings/app")}
           />
           <View style={[styles.divider, { backgroundColor: colors.border.tertiary }]} />
           <SettingsRow
             icon={Shell}
-            label="Brainrot"
+            label={t('settings.brainrot')}
             onPress={() => router.push("/settings/brainrot")}
           />
         </View>
 
         <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: typography.caption }]}>
-          AI
+          {t('settings.ai')}
         </Text>
         <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 10 }]}>
           <SettingsRow
             icon={Sparkles}
-            label="AI Settings"
+            label={t('settings.aiSettings')}
             onPress={() => router.push("/settings/ai")}
+          />
+        </View>
+
+        <Text style={[styles.sectionHeader, { color: colors.fg.muted, fontFamily: fonts.sans.medium, fontSize: typography.caption }]}>
+          {t('settings.language')}
+        </Text>
+        <View style={[styles.section, { backgroundColor: colors.bg.raised, borderRadius: 10 }]}>
+          <SettingsRow
+            icon={Globe}
+            label={t('settings.languageOption')}
+            onPress={() => router.push("/settings/language")}
           />
         </View>
 

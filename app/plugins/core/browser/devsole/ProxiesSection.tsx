@@ -2,6 +2,7 @@ import InputModal from "@/components/InputModal";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Plus, RefreshCw, Trash2 } from "lucide-react-native";
 import React, { useRef, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Animated, Text, TouchableOpacity, View } from "react-native";
 
 function sortPorts(values: number[]): number[] {
@@ -25,6 +26,7 @@ export default function ProxiesSection({
   onTrackPort: (port: number) => Promise<void>;
   onUntrackPort: (port: number) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const { colors, fonts, radius } = useTheme();
   const [addPortModalVisible, setAddPortModalVisible] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -57,7 +59,7 @@ export default function ProxiesSection({
   const handleAddPort = async (value: string) => {
     const parsedPort = Number(value.trim());
     if (!Number.isInteger(parsedPort) || parsedPort < 1 || parsedPort > 65535) {
-      setLocalError("Enter a valid port between 1 and 65535.");
+      setLocalError(t('browser.proxyPortError'));
       return;
     }
 
@@ -112,7 +114,7 @@ export default function ProxiesSection({
               fontFamily: fonts.sans.semibold,
             }}
           >
-            Add Port
+            {t('browser.proxyAddPort')}
           </Text>
         </TouchableOpacity>
 
@@ -144,7 +146,7 @@ export default function ProxiesSection({
           fontFamily: fonts.sans.regular,
         }}
       >
-        {localError || error || "Tracked ports are shared across all tabs and open on phone localhost once the CLI reports them live."}
+        {localError || error || t('browser.proxyHint')}
       </Text>
 
       <View
@@ -171,7 +173,7 @@ export default function ProxiesSection({
               textTransform: "uppercase",
             }}
           >
-            Port
+            {t('browser.proxyPortHeader')}
           </Text>
           <Text
             style={{
@@ -182,7 +184,7 @@ export default function ProxiesSection({
               textTransform: "uppercase",
             }}
           >
-            Status
+            {t('browser.proxyStatusHeader')}
           </Text>
           <Text
             style={{
@@ -194,7 +196,7 @@ export default function ProxiesSection({
               textAlign: "right",
             }}
           >
-            Del
+            {t('browser.proxyDelHeader')}
           </Text>
         </View>
 
@@ -207,7 +209,7 @@ export default function ProxiesSection({
                 fontFamily: fonts.sans.regular,
               }}
             >
-              No tracked ports yet.
+              {t('browser.proxyNoTracked')}
             </Text>
           </View>
         ) : (
@@ -246,7 +248,7 @@ export default function ProxiesSection({
                     fontFamily: fonts.sans.semibold,
                   }}
                 >
-                  {isOpen ? "Live" : "Waiting"}
+                  {isOpen ? t('browser.proxyLive') : t('browser.proxyWaiting')}
                 </Text>
 
                 <TouchableOpacity
@@ -276,12 +278,12 @@ export default function ProxiesSection({
         onAccept={(value) => {
           void handleAddPort(value);
         }}
-        title="Add Port"
+        title={t('browser.proxyAddPort')}
         type="number"
-        description="Track a localhost proxy port"
-        placeholder="Port number"
-        acceptLabel={isSubmitting ? "Adding" : "Add"}
-        cancelLabel="Cancel"
+        description={t('browser.proxyAddPortDesc')}
+        placeholder={t('browser.proxyPortPlaceholder')}
+        acceptLabel={isSubmitting ? t('browser.proxyAdding') : t('browser.proxyAdd')}
+        cancelLabel={t('common.cancel')}
       />
     </View>
   );

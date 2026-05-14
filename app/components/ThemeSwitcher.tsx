@@ -1,17 +1,15 @@
 import {
   ThemeOption,
-  themeDescriptions,
-  themeLabels,
   themes,
 } from "@/constants/themes";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Check } from "lucide-react-native";
 import React from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 interface ThemeCardData {
   id: ThemeOption;
-  description: string;
   previewColors: string[];
 }
 
@@ -19,8 +17,8 @@ const THEME_OPTIONS: ThemeOption[] = ["system", "light", "dark"];
 
 export function ThemeSwitcher() {
   const { selectedTheme, setTheme, colors, fonts, radius, spacing, typography } = useTheme();
+  const { t } = useTranslation();
 
-  // Build theme options with preview colors
   const themeOptions: ThemeCardData[] = THEME_OPTIONS.map((id) => {
     const resolvedId = id === "system" ? "dark" : id;
     const theme = themes[resolvedId];
@@ -31,11 +29,7 @@ export function ThemeSwitcher() {
       theme.terminal.green,
     ];
 
-    return {
-      id,
-      description: themeDescriptions[id],
-      previewColors,
-    };
+    return { id, previewColors };
   });
 
   return (
@@ -68,7 +62,7 @@ export function ThemeSwitcher() {
                     marginBottom: spacing[1],
                   }}
                 >
-                  {themeLabels[theme.id]}
+                  {t(`themeSettings.${theme.id}`)}
                 </Text>
 
                 <Text
@@ -79,7 +73,7 @@ export function ThemeSwitcher() {
                     lineHeight: 16,
                   }}
                 >
-                  {theme.description}
+                  {t(`themeSettings.${theme.id}Desc`)}
                 </Text>
               </View>
 

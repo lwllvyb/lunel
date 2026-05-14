@@ -1,5 +1,6 @@
 import Header, { BaseTab, useHeaderHeight } from "@/components/Header";
 import Loading from "@/components/Loading";
+import { useTranslation } from "react-i18next";
 import { useSessionRegistryActions } from "@/contexts/SessionRegistry";
 import { radius } from "@/constants/themes";
 import { useConnection } from "@/contexts/ConnectionContext";
@@ -913,7 +914,7 @@ const TerminalToolbar = memo(
               importantForAutofill="no"
               spellCheck={false}
               placeholderTextColor={colors.fg.muted + "88"}
-              placeholder="Type..."
+              placeholder={t('terminal.typePlaceholder')}
               onFocus={() => setQuickInputFocused(true)}
               onBlur={() => setQuickInputFocused(false)}
             />
@@ -1318,6 +1319,7 @@ export default function TerminalPanel({
   isActive,
   bottomBarHeight,
 }: PluginPanelProps) {
+  const { t } = useTranslation();
   const { colors, radius, fonts } = useTheme();
   const headerHeight = useHeaderHeight();
   const { status } = useConnection();
@@ -1487,7 +1489,7 @@ export default function TerminalPanel({
     const newId = Date.now().toString();
     const newTab: TerminalTab = {
       id: newId,
-      title: "Terminal",
+      title: t('nav.terminal'),
     };
     setTabs((prev) => [...prev, newTab]);
     setActiveTabId(newId);
@@ -1774,8 +1776,8 @@ export default function TerminalPanel({
     const permission = await Audio.requestPermissionsAsync();
     if (!permission.granted) {
       Alert.alert(
-        "Microphone Permission Required",
-        "This app uses the microphone so you can speak commands instead of typing in the terminal. Voice is sent to our servers for transcription only — we don't store or log it. Please enable microphone access in Settings to use this feature."
+        t('terminal.micPermTitle'),
+        t('terminal.micPermDesc')
       );
       return;
     }
@@ -1973,7 +1975,7 @@ export default function TerminalPanel({
     <View style={{ flex: 1, backgroundColor: colors.bg.base }}>
       {/* Header */}
       <Header
-        title={activeTab?.title || "Terminal"}
+        title={activeTab?.title || t('nav.terminal')}
         colors={colors}
         showBottomBorder={tabs.length > 0}
       />
@@ -2019,7 +2021,7 @@ export default function TerminalPanel({
             <View style={{ alignItems: "center", gap: 8 }}>
               <Terminal size={48} color={colors.fg.muted} strokeWidth={1.5} />
               <Text style={{ color: colors.fg.muted, fontSize: 16, fontFamily: fonts.sans.regular }}>
-                {isConnected ? "No terminals open" : "Not connected"}
+                {isConnected ? t('common.noTerminalsOpen') : t('common.notConnected')}
               </Text>
             </View>
             {isConnected && (
@@ -2040,7 +2042,7 @@ export default function TerminalPanel({
                     fontFamily: fonts.sans.medium,
                   }}
                 >
-                  Open New Terminal
+                  {t('common.openNewTerminal')}
                 </Text>
               </TouchableOpacity>
             )}

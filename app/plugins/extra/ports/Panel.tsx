@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ScrollView,
   StyleSheet,
@@ -18,6 +19,7 @@ import { PluginPanelProps } from '../../types';
 import { useApi, PortInfo, ApiError } from '@/hooks/useApi';
 
 function PortsPanel({ instanceId, isActive }: PluginPanelProps) {
+  const { t } = useTranslation();
   const { colors, fonts, spacing, radius } = useTheme();
   const headerHeight = useHeaderHeight();
   const { ports: portsApi, isConnected } = useApi();
@@ -40,7 +42,7 @@ function PortsPanel({ instanceId, isActive }: PluginPanelProps) {
       const result = await portsApi.list();
       setPortsList(result);
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Failed to load ports';
+      const message = err instanceof ApiError ? err.message : t('ports.errorLoadPorts');
       setError(message);
     } finally {
       setLoading(false);
@@ -86,8 +88,8 @@ function PortsPanel({ instanceId, isActive }: PluginPanelProps) {
       setPortsList(prev => prev.filter(p => p.port !== port));
       loadPorts();
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Failed to kill port';
-      Alert.alert('Error', message);
+      const message = err instanceof ApiError ? err.message : t('ports.errorKillPort');
+      Alert.alert(t('common.error'), message);
     } finally {
       setKillingPorts(prev => {
         const next = new Set(prev);
@@ -104,7 +106,7 @@ function PortsPanel({ instanceId, isActive }: PluginPanelProps) {
   if (!isConnected) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg.base }}>
-        <Header title="Ports" colors={colors} />
+        <Header title={t('nav.ports')} colors={colors} />
         <NotConnected colors={colors} fonts={fonts} />
       </View>
     );
@@ -113,7 +115,7 @@ function PortsPanel({ instanceId, isActive }: PluginPanelProps) {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg.base, position: 'relative' }}>
       <Header
-        title="Ports"
+        title={t('nav.ports')}
         colors={colors}
         rightAccessory={
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -155,7 +157,7 @@ function PortsPanel({ instanceId, isActive }: PluginPanelProps) {
                 color: colors.fg.default,
                 outline: 'none',
               } as any}
-              placeholder="search ports..."
+              placeholder={t('ports.searchPlaceholder')}
               placeholderTextColor={colors.fg.subtle}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -212,7 +214,7 @@ function PortsPanel({ instanceId, isActive }: PluginPanelProps) {
                 color: colors.fg.muted,
                 marginTop: spacing[3],
               }}>
-                No listening ports
+                {t('ports.noListeningPorts')}
               </Text>
             </View>
           ) : (() => {

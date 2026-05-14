@@ -10,6 +10,7 @@ import InfoSheet from "@/components/InfoSheet";
 import InputModal from "@/components/InputModal";
 import { DrawerContentComponentProps, useDrawerStatus } from "@react-navigation/drawer";
 import * as Haptics from "expo-haptics";
+import { useTranslation } from "react-i18next";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import {
@@ -179,6 +180,7 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
   const { colors, fonts, isDark } = useTheme();
   const { status, disconnect } = useConnection();
   const { fs } = useApi();
+  const { t } = useTranslation();
   const {
     activeTabId: activePluginTabId,
     openTabs,
@@ -275,7 +277,7 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
     : [];
 
   const pluginDef = effectivePluginId ? getPlugin(effectivePluginId) : null;
-  const pluginName = pluginDef?.name ?? "Sessions";
+  const pluginName = pluginDef?.name ?? t('drawer.sessionsDefault');
   const shouldHideSearchAndSessions = effectivePluginId
     ? HIDE_SIDEBAR_SESSION_PLUGIN_IDS.has(effectivePluginId)
     : false;
@@ -296,12 +298,12 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
     }
 
     Alert.alert(
-      "Delete Session",
-      "Are you sure you want to delete this session?",
+      t('drawer.deleteSessionTitle'),
+      t('drawer.deleteSessionDesc'),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t('common.cancel'), style: "cancel" },
         {
-          text: "Delete",
+          text: t('common.delete'),
           style: "destructive",
           onPress: () => reg?.onSessionClose(id),
         },
@@ -343,12 +345,12 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
   const handleHomePress = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Alert.alert(
-      'Go Home',
-      'Are you sure you want to leave this session?',
+      t('drawer.goHomeTitle'),
+      t('drawer.goHomeDesc'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Home',
+          text: t('common.home'),
           style: 'destructive',
           onPress: () => {
             closeDrawerThen(() => {
@@ -406,7 +408,7 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
       });
       setEditorTreeError(null);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to load files";
+      const message = error instanceof Error ? error.message : t('drawer.failedLoadFiles');
       setEditorTreeError(message);
     } finally {
       setLoadingEditorDirs((prev) => {
@@ -454,8 +456,8 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
     openTab("editor");
     props.navigation.closeDrawer();
     void gPI.editor.openFile(filePath).catch((error) => {
-      const message = error instanceof Error ? error.message : "Failed to open file";
-      Alert.alert("Error", message);
+      const message = error instanceof Error ? error.message : t('drawer.failedOpenFile');
+      Alert.alert(t('common.error'), message);
     });
   }, [openTab, props.navigation, setDrawerContentVariant]);
 
@@ -468,7 +470,7 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
         <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
           <View style={styles.editorFilesHeader}>
             <Text style={[styles.editorFilesTitle, { color: colors.fg.muted, fontFamily: fonts.sans.medium }]}>
-              Files
+              {t('common.files')}
             </Text>
             <View style={styles.editorFilesHeaderActions}>
               <TouchableOpacity
@@ -516,7 +518,7 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
             <View style={[styles.emptyState, { paddingTop: 32 }]}>
               <SpinningLoader color={colors.fg.muted} opacity={0.6} />
               <Text style={[styles.emptyText, { color: colors.fg.subtle, fontFamily: fonts.sans.regular }]}>
-                Loading files...
+                {t('drawer.loadingFiles')}
               </Text>
             </View>
           ) : editorTreeError ? (
@@ -528,7 +530,7 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
           ) : visibleEditorTree.length === 0 ? (
             <View style={[styles.emptyState, { paddingTop: 32 }]}>
               <Text style={[styles.emptyText, { color: colors.fg.subtle, fontFamily: fonts.sans.regular }]}>
-                No files found
+                {t('drawer.noFilesFound')}
               </Text>
             </View>
           ) : (
@@ -601,7 +603,7 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
                 <TextInput
                   ref={inputRef}
                   style={[styles.searchInput, { color: colors.fg.default, fontFamily: fonts.sans.regular }]}
-                  placeholder="Search sessions..."
+                  placeholder={t('drawer.searchPlaceholder')}
                   placeholderTextColor={colors.fg.subtle}
                   value={search}
                   onChangeText={setSearch}
@@ -627,7 +629,7 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
             <View style={styles.sessionsSection}>
               {effectivePluginId === 'ai' ? null : (
                 <Text style={[styles.sessionsLabel, { color: colors.fg.muted, fontFamily: fonts.sans.medium }]}>
-                  {pluginName} Sessions
+                  {t('drawer.sessions', { name: pluginName })}
                 </Text>
               )}
 
@@ -635,14 +637,14 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
                 <View style={styles.emptyState}>
                   <SpinningLoader color={colors.fg.muted} opacity={0.6} />
                   <Text style={[styles.emptyText, { color: colors.fg.subtle, fontFamily: fonts.sans.regular }]}>
-                    Loading sessions...
+                    {t('drawer.loadingSessions')}
                   </Text>
                 </View>
               ) : filteredSessions.length === 0 ? (
                 <View style={[styles.emptyState, { paddingTop: 50 }]}>
                   <Ionicons name="chatbox-ellipses" size={26} color={colors.fg.muted} />
                   <Text style={[styles.emptyText, { color: colors.fg.subtle, fontFamily: fonts.sans.regular }]}>
-                    No sessions yet
+                    {t('drawer.noSessionsYet')}
                   </Text>
                 </View>
               ) : (
@@ -700,7 +702,7 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
                               <View style={styles.viewAllRow}>
                                 <SpinningLoader color={colors.fg.muted} opacity={0.6} size={14} />
                                 <Text style={[styles.viewAllText, { color: colors.fg.muted, fontFamily: fonts.sans.regular, opacity: 0.6 }]}>
-                                  Loading...
+                                  {t('drawer.loadingMore')}
                                 </Text>
                               </View>
                             )}
@@ -711,7 +713,7 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
                                 style={styles.viewAllRow}
                               >
                                 <Text style={[styles.viewAllText, { color: colors.fg.muted, fontFamily: fonts.sans.regular, opacity: 0.6 }]}>
-                                  View all ({group.sessions.length - SESSIONS_LIMIT} more)
+                                  {t('drawer.viewAll', { count: group.sessions.length - SESSIONS_LIMIT })}
                                 </Text>
                                 <ChevronDown size={17} color={colors.fg.muted} strokeWidth={2} style={{ opacity: 0.8 }} />
                               </TouchableOpacity>
@@ -750,7 +752,7 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
                   Lunel
                 </Text>
                 <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: colors.fg.subtle, lineHeight: 17 }}>
-                  Ship from Anywhere
+                  {t('auth.tagline')}
                 </Text>
               </View>
             </View>
@@ -761,19 +763,19 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
         <View style={[styles.bottomBar, { borderTopColor: colors.border.secondary }]}>
           <TouchableOpacity onPress={handleHomePress} style={styles.bottomBtn} activeOpacity={0.7}>
             <Home size={22} color={colors.fg.muted} strokeWidth={1.6} />
-            <Text style={[styles.bottomBtnLabel, { color: colors.fg.subtle, fontFamily: fonts.sans.regular }]}>Home</Text>
+            <Text style={[styles.bottomBtnLabel, { color: colors.fg.subtle, fontFamily: fonts.sans.regular }]}>{t('common.home')}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleSettings} style={styles.bottomBtn} activeOpacity={0.7}>
             <Settings size={22} color={colors.fg.muted} strokeWidth={1.6} />
-            <Text style={[styles.bottomBtnLabel, { color: colors.fg.subtle, fontFamily: fonts.sans.regular }]}>Settings</Text>
+            <Text style={[styles.bottomBtnLabel, { color: colors.fg.subtle, fontFamily: fonts.sans.regular }]}>{t('common.settings')}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleHelp} style={styles.bottomBtn} activeOpacity={0.7}>
             <HelpCircle size={22} color={colors.fg.muted} strokeWidth={1.6} />
-            <Text style={[styles.bottomBtnLabel, { color: colors.fg.subtle, fontFamily: fonts.sans.regular }]}>Help</Text>
+            <Text style={[styles.bottomBtnLabel, { color: colors.fg.subtle, fontFamily: fonts.sans.regular }]}>{t('common.help')}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleFeedback} style={styles.bottomBtn} activeOpacity={0.7}>
             <MessageCircle size={22} color={colors.fg.muted} strokeWidth={1.6} />
-            <Text style={[styles.bottomBtnLabel, { color: colors.fg.subtle, fontFamily: fonts.sans.regular }]}>Feedback</Text>
+            <Text style={[styles.bottomBtnLabel, { color: colors.fg.subtle, fontFamily: fonts.sans.regular }]}>{t('common.feedback')}</Text>
           </TouchableOpacity>
 
           <View style={{ flex: 1 }} />
@@ -792,8 +794,8 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
             handleSessionRenameStart(pendingRenameSessionTarget.id, pendingRenameSessionTarget.title);
             setPendingRenameSessionTarget(null);
           }}
-          title={selectedSessionAction?.title ?? "Session"}
-          description="Session actions"
+          title={selectedSessionAction?.title ?? t('drawer.sessionFallbackTitle')}
+          description={t('drawer.sessionActions')}
         >
           <View style={{ gap: 8, paddingBottom: 8 }}>
             {reg?.onSessionRename ? (
@@ -808,7 +810,7 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
               >
                 <PencilLine size={18} color={colors.fg.default} strokeWidth={2} />
                 <Text style={{ flex: 1, fontSize: typography.body, fontFamily: fonts.sans.medium, color: colors.fg.default }}>
-                  Rename
+                  {t('common.rename')}
                 </Text>
                 <ChevronRight size={18} color={colors.fg.subtle} strokeWidth={2} />
               </TouchableOpacity>
@@ -826,7 +828,7 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
             >
               <Trash size={18} color={colors.git.deleted} strokeWidth={2} />
               <Text style={{ flex: 1, fontSize: typography.body, fontFamily: fonts.sans.medium, color: colors.git.deleted }}>
-                Delete
+                {t('common.delete')}
               </Text>
               <ChevronRight size={18} color={colors.git.deleted} strokeWidth={2} />
             </TouchableOpacity>
@@ -845,11 +847,11 @@ export default function DrawerContent(props: DrawerContentComponentProps) {
             reg.onSessionRename(renameSessionTarget.id, trimmed);
             setRenameSessionTarget(null);
           }}
-          title="Rename Session"
-          description="Enter a new title"
-          placeholder="Session title"
-          acceptLabel="Rename"
-          cancelLabel="Cancel"
+          title={t('drawer.renameSession')}
+          description={t('drawer.renameSessionDesc')}
+          placeholder={t('drawer.sessionTitlePlaceholder')}
+          acceptLabel={t('common.rename')}
+          cancelLabel={t('common.cancel')}
           initialValue={renameSessionTarget?.title ?? ""}
         />
 

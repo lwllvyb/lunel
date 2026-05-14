@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ScrollView,
   StyleSheet,
@@ -32,6 +33,7 @@ import { useApi, ProcessInfo, ApiError } from '@/hooks/useApi';
 
 
 function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
+  const { t } = useTranslation();
   const { colors, fonts, spacing, radius, typography } = useTheme();
   const { width } = useWindowDimensions();
   const isIPad = Platform.OS === 'ios' && Platform.isPad || width >= 768;
@@ -237,7 +239,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
   if (!isConnected) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg.base }}>
-        <Header title="Processes" colors={colors} />
+        <Header title={t('nav.processes')} colors={colors} />
         <NotConnected colors={colors} fonts={fonts} />
       </View>
     );
@@ -255,11 +257,11 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
               <TouchableOpacity
                 onPress={() => {
                   Alert.alert(
-                    'Kill Process',
-                    `Are you sure you want to kill "${selectedProcess.command}" (PID ${selectedProcess.pid})?`,
+                    t('processes.killTitle'),
+                    t('processes.killDesc', { command: selectedProcess.command, pid: selectedProcess.pid }),
                     [
-                      { text: 'Cancel', style: 'cancel' },
-                      { text: 'Kill', style: 'destructive', onPress: () => killProcess(selectedProcess.pid) },
+                      { text: t('common.cancel'), style: 'cancel' },
+                      { text: t('processes.kill'), style: 'destructive', onPress: () => killProcess(selectedProcess.pid) },
                     ]
                   );
                 }}
@@ -284,7 +286,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
               backgroundColor: getStatusColor(selectedProcess.status),
             }} />
             <Text style={{ fontSize: typography.body, fontFamily: fonts.sans.semibold, color: getStatusColor(selectedProcess.status) }}>
-              {selectedProcess.status.charAt(0).toUpperCase() + selectedProcess.status.slice(1)}
+              {selectedProcess.status === 'running' ? t('processes.statusRunning') : t('processes.statusStopped')}
             </Text>
             <Text style={{ fontSize: typography.caption, fontFamily: fonts.mono.regular, color: colors.fg.subtle }}>
               · PID {selectedProcess.pid}
@@ -294,17 +296,17 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
           <View>
             {/* Command */}
             <View style={{ paddingVertical: spacing[1], paddingHorizontal: spacing[2] }}>
-              <Text style={{ fontSize: typography.caption, fontFamily: fonts.sans.medium, color: colors.fg.subtle, marginBottom: spacing[1] }}>COMMAND</Text>
+              <Text style={{ fontSize: typography.caption, fontFamily: fonts.sans.medium, color: colors.fg.subtle, marginBottom: spacing[1] }}>{t('processes.command')}</Text>
               <Text style={{ fontSize: typography.body, fontFamily: fonts.mono.regular, color: colors.fg.default }}>{selectedProcess.command}</Text>
             </View>
 
 
             {/* Started */}
             <View style={{ paddingVertical: spacing[1], paddingHorizontal: spacing[2] }}>
-              <Text style={{ fontSize: typography.caption, fontFamily: fonts.sans.medium, color: colors.fg.subtle, marginBottom: spacing[1] }}>STARTED</Text>
+              <Text style={{ fontSize: typography.caption, fontFamily: fonts.sans.medium, color: colors.fg.subtle, marginBottom: spacing[1] }}>{t('processes.started')}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
                 <Text style={{ fontSize: typography.body, fontFamily: fonts.sans.regular, color: colors.fg.default }}>{formatTime(selectedProcess.startTime)}</Text>
-                <Text style={{ fontSize: typography.caption, fontFamily: fonts.sans.regular, color: colors.fg.subtle }}>· {formatDuration(selectedProcess.startTime)} ago</Text>
+                <Text style={{ fontSize: typography.caption, fontFamily: fonts.sans.regular, color: colors.fg.subtle }}>· {formatDuration(selectedProcess.startTime)} {t('processes.ago')}</Text>
               </View>
             </View>
 
@@ -312,7 +314,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
             {selectedProcess.cwd && (
               <>
                     <View style={{ paddingVertical: spacing[1], paddingHorizontal: spacing[2] }}>
-                  <Text style={{ fontSize: typography.caption, fontFamily: fonts.sans.medium, color: colors.fg.subtle, marginBottom: spacing[1] }}>WORKING DIR</Text>
+                  <Text style={{ fontSize: typography.caption, fontFamily: fonts.sans.medium, color: colors.fg.subtle, marginBottom: spacing[1] }}>{t('processes.workingDir')}</Text>
                   <Text style={{ fontSize: typography.body, fontFamily: fonts.sans.regular, color: colors.fg.muted }}>{selectedProcess.cwd}</Text>
                 </View>
               </>
@@ -321,7 +323,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
 
           <View style={{ marginTop: spacing[3], backgroundColor: colors.bg.raised, borderRadius: 10, overflow: 'hidden' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing[4], paddingVertical: spacing[3], borderBottomWidth: 0.5, borderBottomColor: colors.border.secondary }}>
-              <Text style={{ fontSize: typography.caption, fontFamily: fonts.sans.medium, color: colors.fg.muted }}>OUTPUT</Text>
+              <Text style={{ fontSize: typography.caption, fontFamily: fonts.sans.medium, color: colors.fg.muted }}>{t('processes.output')}</Text>
               <View style={{ flexDirection: 'row', gap: spacing[3] }}>
                 <TouchableOpacity onPress={refreshOutput}>
                   <RefreshCw size={15} color={colors.fg.muted} strokeWidth={2} />
@@ -337,7 +339,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
               ) : processOutput ? (
                 <Text style={{ fontSize: 12, fontFamily: fonts.mono.regular, color: colors.fg.default }}>{processOutput}</Text>
               ) : (
-                <Text style={{ fontSize: typography.body, fontFamily: fonts.sans.regular, color: colors.fg.subtle, fontStyle: 'italic' }}>No output</Text>
+                <Text style={{ fontSize: typography.body, fontFamily: fonts.sans.regular, color: colors.fg.subtle, fontStyle: 'italic' }}>{t('processes.noOutput')}</Text>
               )}
             </View>
           </View>
@@ -351,7 +353,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg.base, position: 'relative' }}>
       <Header
-        title="Processes"
+        title={t('nav.processes')}
         colors={colors}
         rightAccessory={
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -402,7 +404,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
               } as any}
               value={filter}
               onChangeText={setFilter}
-              placeholder="filter by command or PID..."
+              placeholder={t('processes.filterPlaceholder')}
               placeholderTextColor={colors.fg.subtle}
               autoFocus
               autoCapitalize="none"
@@ -442,7 +444,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
               } as any}
               value={spawnCommand}
               onChangeText={setSpawnCommand}
-              placeholder="command... (e.g. node, npm, python)"
+              placeholder={t('processes.commandPlaceholder')}
               placeholderTextColor={colors.fg.subtle}
               autoFocus
               returnKeyType="next"
@@ -467,7 +469,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
               } as any}
               value={spawnPath}
               onChangeText={setSpawnPath}
-              placeholder="path... (optional absolute path, default current dir)"
+              placeholder={t('processes.pathPlaceholder')}
               placeholderTextColor={colors.fg.subtle}
               autoCapitalize="none"
               autoCorrect={false}
@@ -493,7 +495,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
               } as any}
               value={spawnArgs}
               onChangeText={setSpawnArgs}
-              placeholder="arguments... (e.g. run dev --port 3000)"
+              placeholder={t('processes.argsPlaceholder')}
               placeholderTextColor={colors.fg.subtle}
               returnKeyType="done"
               onSubmitEditing={spawnProcess}
@@ -512,7 +514,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
                 justifyContent: 'center',
               }}
             >
-              <Text style={{ fontSize: 13, fontFamily: fonts.sans.medium, color: colors.fg.default }}>Cancel</Text>
+              <Text style={{ fontSize: 13, fontFamily: fonts.sans.medium, color: colors.fg.default }}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={spawnProcess}
@@ -530,7 +532,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
               {spawning ? (
                 <ActivityIndicator size="small" color="#ffffff" />
               ) : (
-                <Text style={{ fontSize: 13, fontFamily: fonts.sans.medium, color: '#ffffff' }}>Spawn</Text>
+                <Text style={{ fontSize: 13, fontFamily: fonts.sans.medium, color: '#ffffff' }}>{t('processes.spawn')}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -577,7 +579,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
             marginTop: spacing[4],
             textAlign: 'center',
           }}>
-            {filter ? 'No matching processes' : 'No managed processes'}
+            {filter ? t('processes.noMatchingProcesses') : t('processes.noManagedProcesses')}
           </Text>
           {!filter && (
             <Text style={{
@@ -587,7 +589,7 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
               marginTop: spacing[2],
               textAlign: 'center',
             }}>
-              Tap + to spawn a new process
+              {t('processes.tapToSpawn')}
             </Text>
           )}
         </View>
@@ -658,11 +660,11 @@ function ProcessesPanel({ instanceId, isActive }: PluginPanelProps) {
           gap: 6,
         }}>
           <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: colors.fg.muted }}>
-            {filteredProcesses.length} process{filteredProcesses.length !== 1 ? 'es' : ''}
+            {filteredProcesses.length} {filteredProcesses.length !== 1 ? t('processes.processPlural') : t('processes.processSingular')}
           </Text>
           <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: colors.fg.subtle }}>·</Text>
           <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: '#22c55e' }}>
-            {processList.filter(p => p.status === 'running').length} running
+            {processList.filter(p => p.status === 'running').length} {t('processes.running')}
           </Text>
         </View>
       )}

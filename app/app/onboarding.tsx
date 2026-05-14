@@ -24,6 +24,7 @@ import {
   Sparkles,
 } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -101,6 +102,7 @@ const sideOffset = Math.round(SCREEN_WIDTH * 0.20);
 
 function WelcomePage() {
   const { colors, fonts, isDark } = useTheme();
+  const { t } = useTranslation();
   const anim = useRef(new Animated.Value(0)).current;
   const giftShake = useRef(new Animated.Value(0)).current;
 
@@ -156,7 +158,7 @@ function WelcomePage() {
           style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, backgroundColor: colors.bg.raised, marginBottom: 32, opacity: pressed ? 0.6 : 1, borderWidth: 0.5, borderColor: colors.border.main })}
         >
           <FontAwesome name="github" size={14} color={colors.fg.default} />
-          <Text style={{ fontSize: 12, fontFamily: fonts.sans.medium, color: colors.fg.default }}>Open Source</Text>
+          <Text style={{ fontSize: 12, fontFamily: fonts.sans.medium, color: colors.fg.default }}>{t('onboarding.openSource')}</Text>
         </Pressable>
       </Animated.View>
 
@@ -180,22 +182,22 @@ function WelcomePage() {
 
       <Animated.View style={{ alignItems: "center", paddingHorizontal: 32, gap: 10, marginTop: 24, opacity: textEntrance }}>
         <Text style={{ fontSize: 25, fontFamily: fonts.sans.semibold, color: colors.fg.default, textAlign: "center", lineHeight: 32 }}>
-          Lunel
+          {t('onboarding.welcome')}
         </Text>
         <Text style={{ fontSize: 14, fontFamily: fonts.sans.regular, color: colors.fg.muted, textAlign: "center", lineHeight: 22, maxWidth: 280, marginTop: -3 }}>
-          lunel brings your whole dev environment in your pocket
+          {t('onboarding.description')}
         </Text>
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, backgroundColor: colors.bg.raised }}>
             <MaterialCommunityIcons name="shield-lock" size={14} color={colors.fg.default} />
-            <Text style={{ fontSize: 12, fontFamily: fonts.sans.medium, color: colors.fg.default }}>End-to-end encryption</Text>
+            <Text style={{ fontSize: 12, fontFamily: fonts.sans.medium, color: colors.fg.default }}>{t('onboarding.endToEndEncryption')}</Text>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: colors.bg.raised, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}>
             <Animated.View style={{ transform: [{ rotate: giftRotate }] }}>
               <Ionicons name="gift" size={14} color={colors.fg.default} />
             </Animated.View>
-            <Text style={{ fontSize: 12, fontFamily: fonts.sans.semibold, color: colors.fg.default }}>Free</Text>
+            <Text style={{ fontSize: 12, fontFamily: fonts.sans.semibold, color: colors.fg.default }}>{t('onboarding.free')}</Text>
           </View>
         </View>
       </Animated.View>
@@ -204,161 +206,29 @@ function WelcomePage() {
 }
 
 type Feature = {
-  name: string;
-  description: string;
-  points: string[];
+  nameKey: string;
+  descKey: string;
   Icon: LucideIcon;
   color: string;
 };
 
 const FEATURES: Feature[] = [
-  {
-    name: "AI Agents",
-    description: "Run Codex and OpenCode straight from the app.",
-    points: [
-      "Run Codex and OpenCode inside your workspace",
-      "50+ models including Claude, GPT-4o, Gemini, and more",
-      "Switch between Plan, Build, and other agent modes",
-      "Record voice, transcribed instantly into a prompt",
-      "Attach files and images, review diffs before applying",
-    ],
-    Icon: Sparkles,
-    color: "#8b5cf6",
-  },
-  {
-    name: "Browser",
-    description: "A full browser with dev tools baked in",
-    points: [
-      "Debug your web app as if you were on desktop",
-      "Watch every network request fly by in real time",
-      "Tweak elements and styles live without reloading",
-      "Catch errors and console logs as they happen",
-      "Intercept and modify traffic with proxy support",
-    ],
-    Icon: Globe,
-    color: "#06b6d4",
-  },
-  {
-    name: "Code Editor",
-    description: "A proper editor built for mobile",
-    points: [
-      "Syntax highlighting across 20+ languages",
-      "Edit multiple files without losing your place",
-      "Smart indentation keeps your code clean",
-      "Tap a symbol to jump, swipe between open files",
-      "Keyboard designed for writing real code on mobile",
-    ],
-    Icon: Code2,
-    color: "#6366f1",
-  },
-  {
-    name: "File Explorer",
-    description: "Browse and manage your entire project tree",
-    points: [
-      "Navigate any project, no matter how large",
-      "Find files fast with search and smart filters",
-      "Create, rename, move, and delete anything",
-      "Jump straight into editing with a single tap",
-      "Copy paths and open files across tools instantly",
-    ],
-    Icon: FolderSearch,
-    color: "#f59e0b",
-  },
-  {
-    name: "Terminal",
-    description: "Run commands, scripts, and builds from your device.",
-    points: [
-      "Run anything you can run on your desktop",
-      "Sessions stay alive even when you disconnect",
-      "Install packages, run builds, and deploy remotely",
-      "SSH into any server directly from the app",
-      "Full color support so your terminal looks right",
-    ],
-    Icon: SquareTerminal,
-    color: "#10b981",
-  },
-  {
-    name: "Git",
-    description: "Full Git workflow without leaving the app",
-    points: [
-      "Stage files or individual hunks with precision",
-      "Commit, push, and ship code from anywhere",
-      "Browse the full commit history at a glance",
-      "Create and switch branches on the fly",
-      "Pull, merge, and stay in sync with your team",
-    ],
-    Icon: GitBranch,
-    color: "#ef4444",
-  },
-  {
-    name: "Process Manager",
-    description: "See and control every process on your machine",
-    points: [
-      "See everything running on your machine at once",
-      "Find any process instantly with live search",
-      "Kill stuck or runaway processes with one tap",
-      "Start new processes directly from the app",
-      "Stream live output without opening a terminal",
-    ],
-    Icon: Cpu,
-    color: "#f97316",
-  },
-  {
-    name: "Port Manager",
-    description: "Know what's listening and shut it down fast",
-    points: [
-      "See every active port and exactly what owns it",
-      "Kill a port listener with one tap, no terminal needed",
-      "Free up blocked ports before they slow you down",
-      "Search by port number or process name",
-      "Spot port conflicts before they break your server",
-    ],
-    Icon: Network,
-    color: "#3b82f6",
-  },
-  {
-    name: "API Testing",
-    description: "Test endpoints without leaving your phone",
-    points: [
-      "Fire requests with any HTTP method in seconds",
-      "Set headers, auth tokens, and a request body",
-      "Read the full response: status, headers, and body",
-      "History keeps every request so you never lose work",
-      "Route requests through your machine to hit local APIs",
-    ],
-    Icon: Shield,
-    color: "#a855f7",
-  },
-  {
-    name: "Text Tools",
-    description: "A developer's Swiss Army knife",
-    points: [
-      "Format messy JSON or XML in one tap",
-      "Encode and decode Base64 and URLs on the fly",
-      "Generate MD5, SHA-1, and SHA-256 hashes instantly",
-      "Convert Unix timestamps to readable dates",
-      "Every dev utility you need, no browser tab required",
-    ],
-    Icon: Type,
-    color: "#14b8a6",
-  },
-  {
-    name: "Resource Monitor",
-    description: "Live system stats with real-time graphs",
-    points: [
-      "Watch CPU and memory use as it happens",
-      "See which cores are under load at any moment",
-      "Track disk reads and writes in real time",
-      "Monitor network usage in and out",
-      "Spot bottlenecks before they crash your build",
-    ],
-    Icon: Activity,
-    color: "#ec4899",
-  },
+  { nameKey: "onboarding.featureAiAgents", descKey: "onboarding.featureAiAgentsDesc", Icon: Sparkles, color: "#8b5cf6" },
+  { nameKey: "onboarding.featureBrowser", descKey: "onboarding.featureBrowserDesc", Icon: Globe, color: "#06b6d4" },
+  { nameKey: "onboarding.featureCodeEditor", descKey: "onboarding.featureCodeEditorDesc", Icon: Code2, color: "#6366f1" },
+  { nameKey: "onboarding.featureFileExplorer", descKey: "onboarding.featureFileExplorerDesc", Icon: FolderSearch, color: "#f59e0b" },
+  { nameKey: "onboarding.featureTerminal", descKey: "onboarding.featureTerminalDesc", Icon: SquareTerminal, color: "#10b981" },
+  { nameKey: "onboarding.featureGit", descKey: "onboarding.featureGitDesc", Icon: GitBranch, color: "#ef4444" },
+  { nameKey: "onboarding.featureProcessManager", descKey: "onboarding.featureProcessManagerDesc", Icon: Cpu, color: "#f97316" },
+  { nameKey: "onboarding.featurePortManager", descKey: "onboarding.featurePortManagerDesc", Icon: Network, color: "#3b82f6" },
+  { nameKey: "onboarding.featureApiTesting", descKey: "onboarding.featureApiTestingDesc", Icon: Shield, color: "#a855f7" },
+  { nameKey: "onboarding.featureTextTools", descKey: "onboarding.featureTextToolsDesc", Icon: Type, color: "#14b8a6" },
+  { nameKey: "onboarding.featureResourceMonitor", descKey: "onboarding.featureResourceMonitorDesc", Icon: Activity, color: "#ec4899" },
 ];
 
 function FeatureCard({ feature }: { feature: Feature }) {
   const { colors, fonts } = useTheme();
+  const { t } = useTranslation();
   return (
     <View style={{ backgroundColor: colors.bg.raised, borderRadius: 14, padding: 12 }}>
       {/* Icon + name row */}
@@ -378,10 +248,10 @@ function FeatureCard({ feature }: { feature: Feature }) {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 14, fontFamily: fonts.sans.semibold, color: colors.fg.default, lineHeight: 19 }}>
-            {feature.name}
+            {t(feature.nameKey)}
           </Text>
           <Text style={{ fontSize: 11.5, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 15, marginTop: 1 }}>
-            {feature.description}
+            {t(feature.descKey)}
           </Text>
         </View>
       </View>
@@ -392,6 +262,7 @@ function FeatureCard({ feature }: { feature: Feature }) {
 
 function FeaturesPage() {
   const { colors, fonts } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
@@ -402,10 +273,10 @@ function FeaturesPage() {
         {/* Header */}
         <View style={{ paddingTop: 35, paddingHorizontal: 24, marginBottom: 20 }}>
           <Text style={{ fontSize: 24, fontFamily: fonts.sans.semibold, color: colors.fg.default, lineHeight: 30, marginBottom: 6 }}>
-            What's inside
+            {t('onboarding.whatInside')}
           </Text>
           <Text style={{ fontSize: 14, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 22, marginBottom: 16 }}>
-            A complete dev environment in your pocket
+            {t('onboarding.completeDev')}
           </Text>
         </View>
 
@@ -453,34 +324,15 @@ function CopyableCommand({ command, fonts, colors }: { command: string; fonts: R
 }
 
 const ENCRYPTION_POINTS = [
-  {
-    icon: Shield,
-    label: "End-to-end encrypted sessions",
-    sub: "Encrypted between your device and machine.",
-    color: "#5b6df8",
-  },
-  {
-    icon: QrCode,
-    label: "Local pairing with QR",
-    sub: "One-time QR pairing keeps each connection secure.",
-    color: "#06b6d4",
-  },
-  {
-    icon: EyeOff,
-    label: "No tracking telemetry",
-    sub: "No analytics events or behavioral tracking.",
-    color: "#10b981",
-  },
-  {
-    icon: GitBranch,
-    label: "Open source implementation",
-    sub: "Check the code and verify security.",
-    color: "#f59e0b",
-  },
+  { icon: Shield, labelKey: "onboarding.endToEndSessions", subKey: "onboarding.encryptedBetween", color: "#5b6df8" },
+  { icon: QrCode, labelKey: "onboarding.localPairing", subKey: "onboarding.oneTimeQr", color: "#06b6d4" },
+  { icon: EyeOff, labelKey: "onboarding.noTracking", subKey: "onboarding.noAnalytics", color: "#10b981" },
+  { icon: GitBranch, labelKey: "onboarding.openSourceImpl", subKey: "onboarding.checkCode", color: "#f59e0b" },
 ];
 
 function EncryptionPage() {
   const { colors, fonts } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
@@ -489,15 +341,15 @@ function EncryptionPage() {
           <View style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: colors.bg.raised, borderRadius: 999, paddingHorizontal: 11, paddingVertical: 5 }}>
             <Shield size={13} color={colors.fg.default} strokeWidth={2.1} />
             <Text style={{ fontSize: 11.5, fontFamily: fonts.sans.semibold, color: colors.fg.default, letterSpacing: 0.2 }}>
-              Privacy First
+              {t('onboarding.privacyFirst')}
             </Text>
           </View>
 
           <Text style={{ fontSize: 27, fontFamily: fonts.sans.semibold, color: colors.fg.default, lineHeight: 34, marginTop: 14, marginBottom: 7 }}>
-            Security that feels invisible
+            {t('onboarding.securityInvisible')}
           </Text>
           <Text style={{ fontSize: 14, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 22, maxWidth: 300 }}>
-            Lunel keeps your session private by default, so you can connect and ship without extra setup.
+            {t('onboarding.keepPrivate')}
           </Text>
         </View>
 
@@ -520,10 +372,10 @@ function EncryptionPage() {
               </View>
               <View style={{ flex: 1, paddingTop: 1 }}>
                 <Text style={{ fontSize: 13.8, fontFamily: fonts.sans.semibold, color: colors.fg.default, marginBottom: 3 }}>
-                  {point.label}
+                  {t(point.labelKey)}
                 </Text>
                 <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 18 }}>
-                  {point.sub}
+                  {t(point.subKey)}
                 </Text>
               </View>
             </View>
@@ -547,7 +399,7 @@ function EncryptionPage() {
           <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
             <FontAwesome name="github" size={15} color={colors.fg.default} />
             <Text style={{ fontSize: 12.8, fontFamily: fonts.sans.medium, color: colors.fg.default }}>
-              Review the source on GitHub
+              {t('onboarding.reviewGithub')}
             </Text>
           </View>
           <Ionicons name="arrow-forward" size={14} color={colors.fg.muted} />
@@ -563,31 +415,16 @@ function EncryptionPage() {
 }
 
 const GLAZE_POINTS = [
-  { icon: "github" as const, label: "Open source", sub: "Built in public. Every line on GitHub" },
-  { icon: "shield-lock" as const, label: "End-to-end encrypted", sub: "Your code never touches our servers" },
-  { icon: "gift" as const, label: "Free forever", sub: "Lunel Connect costs nothing, ever" },
-  { icon: "earth" as const, label: "Works with any stack", sub: "Next.js, Node, React Native and more" },
+  { icon: "github" as const, labelKey: "onboarding.openSourceLabel", subKey: "onboarding.builtInPublic" },
+  { icon: "shield-lock" as const, labelKey: "onboarding.endToEndEncryptedLabel", subKey: "onboarding.codeNeverTouches" },
+  { icon: "gift" as const, labelKey: "onboarding.foreverFree", subKey: "onboarding.lunelConnect" },
+  { icon: "earth" as const, labelKey: "onboarding.worksAnyStack", subKey: "onboarding.nextJsNode" },
 ];
 
 const REVIEWS = [
-  {
-    name: "nafderlin",
-    title: "Game changer for on-the-go devs",
-    text: "Pushed a hotfix from my phone on the train and it just worked. Full terminal, real shell, everything. Can't believe this is free.",
-    stars: 5,
-  },
-  {
-    name: "kenny",
-    title: "Finally a real mobile IDE",
-    text: "Every other app I tried felt like a toy. Lunel actually lets me work. The editor is solid, git is built in, and the QR connect is seamless.",
-    stars: 5,
-  },
-  {
-    name: "max",
-    title: "Setup took literally 10 seconds",
-    text: "Scanned the QR from my terminal and I was in my repo instantly. End to end encrypted too which gives me peace of mind. Highly recommend.",
-    stars: 5,
-  },
+  { name: "nafderlin", titleKey: "onboarding.review1Title", textKey: "onboarding.review1Text", stars: 5 },
+  { name: "kenny", titleKey: "onboarding.review2Title", textKey: "onboarding.review2Text", stars: 5 },
+  { name: "max", titleKey: "onboarding.review3Title", textKey: "onboarding.review3Text", stars: 5 },
 ];
 
 function StarRow({ count, colors }: { count: number; colors: ReturnType<typeof useTheme>["colors"] }) {
@@ -602,16 +439,17 @@ function StarRow({ count, colors }: { count: number; colors: ReturnType<typeof u
 
 function GlazePage() {
   const { colors, fonts } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 28, paddingBottom: 90 }}>
         <View style={{ paddingTop: 35, marginBottom: 28 }}>
           <Text style={{ fontSize: 24, fontFamily: fonts.sans.semibold, color: colors.fg.default, lineHeight: 30, marginBottom: 6 }}>
-            Built different
+            {t('onboarding.builtDifferent')}
           </Text>
           <Text style={{ fontSize: 14, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 22 }}>
-            A few things worth knowing before you dive in
+            {t('onboarding.thingsWorth')}
           </Text>
         </View>
 
@@ -630,10 +468,10 @@ function GlazePage() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 14, fontFamily: fonts.sans.semibold, color: colors.fg.default, marginBottom: 1 }}>
-                  {point.label}
+                  {t(point.labelKey)}
                 </Text>
                 <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 18 }}>
-                  {point.sub}
+                  {t(point.subKey)}
                 </Text>
               </View>
             </View>
@@ -642,7 +480,7 @@ function GlazePage() {
 
         {/* Reviews */}
         <Text style={{ fontSize: 14, fontFamily: fonts.sans.medium, color: colors.fg.default, marginBottom: 14 }}>
-          What people are saying
+          {t('onboarding.whatPeopleSay')}
         </Text>
         <View style={{ gap: 8 }}>
           {REVIEWS.map((r) => (
@@ -652,10 +490,10 @@ function GlazePage() {
                 <Text style={{ fontSize: 11, fontFamily: fonts.sans.regular, color: colors.fg.muted }}>{r.name}</Text>
               </View>
               <Text style={{ fontSize: 13, fontFamily: fonts.sans.semibold, color: colors.fg.default, lineHeight: 18 }}>
-                {r.title}
+                {t(r.titleKey)}
               </Text>
               <Text style={{ fontSize: 12, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 18 }}>
-                {r.text}
+                {t(r.textKey)}
               </Text>
             </View>
           ))}
@@ -663,7 +501,7 @@ function GlazePage() {
 
         <View style={{ marginTop: 20 }}>
           <Text style={{ fontSize: 13, fontFamily: fonts.sans.regular, color: colors.fg.muted, lineHeight: 20 }}>
-            If Lunel looks good to you, leaving a quick review helps more developers find it
+            {t('onboarding.leaveReviewPrompt')}
           </Text>
         </View>
       </ScrollView>
@@ -770,6 +608,7 @@ function OnboardingPage({ page }: { page: Page }) {
 
 export default function OnboardingScreen() {
   const { colors, fonts } = useTheme();
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -898,7 +737,7 @@ export default function OnboardingScreen() {
           })}
         >
           <Text style={{ fontSize: 16, fontFamily: fonts.sans.semibold, color: "#ffffff", letterSpacing: 0.3 }}>
-            {showReviewButton ? "Leave a Review" : isLastPage ? "Get Started" : "Continue"}
+            {showReviewButton ? t('onboarding.leaveReview') : isLastPage ? t('onboarding.getStarted') : t('onboarding.continueBtn')}
           </Text>
         </Pressable>
 
@@ -913,7 +752,7 @@ export default function OnboardingScreen() {
             onPress={handleNext}
             style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
           >
-            <Text style={{ fontSize: 13, fontFamily: fonts.sans.medium, color: colors.fg.muted }}>Skip</Text>
+            <Text style={{ fontSize: 13, fontFamily: fonts.sans.medium, color: colors.fg.muted }}>{t('onboarding.skip')}</Text>
           </Pressable>
         </Animated.View>
 
