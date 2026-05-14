@@ -39,6 +39,10 @@ Mobile app for iOS/Android/Web built with Expo. App is just a dumb client with m
 - Terminal emulator
 - Process management
 
+### Supported Languages (22)
+
+`en`, `zh`, `ja`, `ko`, `es`, `pt`, `de`, `fr`, `vi`, `ru`, `id`, `pl`, `tr`, `it`, `nl`, `sv`, `uk`, `fi`, `zh-TW`, `tw`, `ms`, `es-MX`
+
 <br />
 
 ## CLI
