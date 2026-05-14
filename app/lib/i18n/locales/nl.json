@@ -183,7 +183,13 @@
     "tr": "Turks",
     "it": "Italiaans",
     "nl": "Nederlands",
-    "sv": "Zweeds"
+    "sv": "Zweeds",
+    "uk": "Oekraïens",
+    "fi": "Fins",
+    "zh-TW": "Chinees (Traditioneel)",
+    "tw": "Taiwanees",
+    "ms": "Maleis",
+    "es-MX": "Spaans (Mexico)"
   },
   "settingsApp": {
     "title": "App",

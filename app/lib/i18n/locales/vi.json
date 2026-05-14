@@ -183,7 +183,13 @@
     "tr": "Tiếng Thổ Nhĩ Kỳ",
     "it": "Tiếng Ý",
     "nl": "Tiếng Hà Lan",
-    "sv": "Tiếng Thụy Điển"
+    "sv": "Tiếng Thụy Điển",
+    "uk": "Tiếng Ukraina",
+    "fi": "Tiếng Phần Lan",
+    "zh-TW": "Tiếng Trung (Phồn thể)",
+    "tw": "Tiếng Đài Loan",
+    "ms": "Tiếng Mã Lai",
+    "es-MX": "Tiếng Tây Ban Nha (Mexico)"
   },
   "settingsApp": {
     "title": "Ứng dụng",

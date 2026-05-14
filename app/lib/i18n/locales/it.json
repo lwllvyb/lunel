@@ -183,7 +183,13 @@
     "tr": "Turco",
     "it": "Italiano",
     "nl": "Olandese",
-    "sv": "Svedese"
+    "sv": "Svedese",
+    "uk": "Ucraino",
+    "fi": "Finlandese",
+    "zh-TW": "Cinese (tradizionale)",
+    "tw": "Taiwanese",
+    "ms": "Malese",
+    "es-MX": "Spagnolo (Messico)"
   },
   "settingsApp": {
     "title": "App",

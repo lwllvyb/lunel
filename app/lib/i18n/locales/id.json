@@ -183,7 +183,13 @@
     "tr": "Turki",
     "it": "Italia",
     "nl": "Belanda",
-    "sv": "Swedia"
+    "sv": "Swedia",
+    "uk": "Ukraina",
+    "fi": "Finlandia",
+    "zh-TW": "Tionghoa (Tradisional)",
+    "tw": "Taiwan",
+    "ms": "Melayu",
+    "es-MX": "Spanyol (Meksiko)"
   },
   "settingsApp": {
     "title": "Aplikasi",

@@ -19,6 +19,12 @@ import tr from './locales/tr.json';
 import it from './locales/it.json';
 import nl from './locales/nl.json';
 import sv from './locales/sv.json';
+import uk from './locales/uk.json';
+import fi from './locales/fi.json';
+import zhTW from './locales/zh-TW.json';
+import tw from './locales/tw.json';
+import ms from './locales/ms.json';
+import esMX from './locales/es-MX.json';
 
 export const LANGUAGE_KEY = '@lunel_language';
 export const SUPPORTED_LANGUAGES = [
@@ -38,6 +44,12 @@ export const SUPPORTED_LANGUAGES = [
   'it',
   'nl',
   'sv',
+  'uk',
+  'fi',
+  'zh-TW',
+  'tw',
+  'ms',
+  'es-MX',
 ] as const;
 export type SupportedLanguage = typeof SUPPORTED_LANGUAGES[number];
 
@@ -70,6 +82,12 @@ i18n.use(initReactI18next).init({
     it: { translation: it },
     nl: { translation: nl },
     sv: { translation: sv },
+    uk: { translation: uk },
+    fi: { translation: fi },
+    'zh-TW': { translation: zhTW },
+    tw: { translation: tw },
+    ms: { translation: ms },
+    'es-MX': { translation: esMX },
   },
   lng: 'en',
   fallbackLng: 'en',
